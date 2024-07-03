@@ -5,7 +5,7 @@ A **WIP** web app to recommend **your** next book using embeddings and similarit
  
 ## Getting Started
 
-After installing the required packages generate the embeddings.csv file using
+After installing the required packages generate the embeddings.csv file from the 'Pre-Process Steps' folder using
 ```bash
 python embedding.py 
 ```
