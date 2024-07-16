@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find Your Next Book!</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #4a4a4a;
+            --secondary-color: #f5f5f5;
+            --accent-color: #ff6e61;
+            --text-color: #333;
+            --border-radius: 8px;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: white;
+            padding: 40px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .emoji {
+            font-size: 60px;
+            margin-top: 10px;
+            margin-bottom: -20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+        }
+
+        #query-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        select, input, button {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+        }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        #loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+            color: var(--primary-color);
+        }
+
+        #recommendations, #potential-matches {
+            margin-top: 30px;
+        }
+
+        .book, .potential-match {
+            background-color: var(--secondary-color);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .potential-match {
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .potential-match:hover {
+            background-color: #e8e8e8;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin-top: 0;
+        }
+
+        a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        #show-more {
+            display: none;
+            margin-top: 20px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="emoji">📚</h1>
+        <h1>Want to try out new books?</h1>
+        <form id="query-form">
+            <select id="search-type" name="search_type">
+                <option value="description">Recommend by Book Description</option>
+                <option value="title">Recommend by Book Title</option>
+            </select>
+            <input type="text" id="query" name="query" placeholder="Enter book title or description" required>
+            <button type="submit" id="submit-btn">Get Recommendations</button>
+        </form>
+        <div id="loading">Processing...</div>
+        <div id="potential-matches"></div>
+        <div id="recommendations"></div>
+        <button id="show-more" style="display: none;">Show More</button>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            let allRecommendations = [];
+            let currentlyDisplayed = 0;
+            const recommendationsPerPage = 5;
+
+            function displayRecommendations(start, end) {
+                for (let i = start; i < end && i < allRecommendations.length; i++) {
+                    const book = allRecommendations[i];
+                    $('#recommendations').append(
+                        '<div class="book">' +
+                        '<h3>' + book.Book + '</h3>' +
+                        '<p>Author: ' + book.Author + '</p>' +
+                        '<p>Average Rating: ' + book.Avg_Rating + '</p>' +
+                        '<p><a href="' + book.URL + '" target="_blank">More Info</a></p>' +
+                        '</div>'
+                    );
+                }
+                currentlyDisplayed = end;
+                
+                if (currentlyDisplayed >= allRecommendations.length) {
+                    $('#show-more').hide();
+                } else {
+                    $('#show-more').show();
+                }
+            }
+
+            $('#query-form').submit(function(e) {
+                e.preventDefault();
+                var $submitBtn = $('#submit-btn');
+                var $loading = $('#loading');
+
+                $submitBtn.prop('disabled', true);
+                $loading.show();
+
+                $.ajax({
+                    url: '/recommend',
+                    method: 'POST',
+                    data: $(this).serialize(),
+                    success: function(data) {
+                        $('#recommendations').empty();
+                        $('#potential-matches').empty();
+                        $('#show-more').hide();
+                        
+                        if (data.length > 0 && 'similarity' in data[0]) {
+                            $('#potential-matches').append('<h2>Potential Matches:</h2>');
+                            data.forEach(function(match) {
+                                $('#potential-matches').append(
+                                    '<div class="potential-match" data-title="' + match.Book + '">' +
+                                    '<h3>' + match.Book + '</h3>' +
+                                    '<p>Similarity: ' + match.similarity + '%</p>' +
+                                    '</div>'
+                                );
+                            });
+                        } else {
+                            allRecommendations = data;
+                            displayRecommendations(0, recommendationsPerPage);
+                        }
+                    },
+                    error: function() {
+                        alert('An error occurred while processing your request. Please try again.');
+                    },
+                    complete: function() {
+                        $submitBtn.prop('disabled', false);
+                        $loading.hide();
+                    }
+                });
+            });
+
+            $(document).on('click', '.potential-match', function() {
+                var selectedTitle = $(this).data('title');
+                $('#query').val(selectedTitle);
+                $('#search-type').val('title');
+                $('#query-form').submit();
+            });
+
+            $('#show-more').click(function() {
+                displayRecommendations(currentlyDisplayed, currentlyDisplayed + recommendationsPerPage);
+            });
+        });
+    </script>
+</body>
+</html>
