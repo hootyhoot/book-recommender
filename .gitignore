@@ -1,7 +1,7 @@
 /.DS_Store
 /.env
 /Notes
-/Documentation
-/templates
-/app.py
+Documentation
+templates
+app.py
 /embeddings.csv
