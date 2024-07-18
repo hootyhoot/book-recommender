@@ -21,8 +21,8 @@ nltk.download('stopwords')
 nltk.download('wordnet')
 
 # Load preprocessed data with embeddings
-df = pd.read_csv('embeddings.csv')
-df['embeddings'] = df['embeddings'].apply(eval)
+df = pd.read_parquet('embeddings.parquet')
+df.info(verbose=False, memory_usage="deep")
 tfidf_matrix = df['embeddings'].tolist()
 
 # Initialize lemmatizer
