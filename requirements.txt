@@ -10,7 +10,9 @@ cffi==1.14.6
 charset-normalizer==3.3.2
 click==8.1.7
 colorama==0.4.6
+cramjam==2.8.3
 dataclasses==0.6
+fastparquet==2024.2.0
 filelock==3.14.0
 Flask==3.0.3
 frozenlist==1.4.1
@@ -39,6 +41,7 @@ packaging==24.0
 pandas==2.0.3
 pillow==10.3.0
 pip==24.0
+pyarrow==17.0.0
 pycparser==2.22
 PySocks==1.7.1
 python-dateutil==2.9.0.post0
