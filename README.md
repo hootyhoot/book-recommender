@@ -13,15 +13,8 @@ Run the app with
 ```bash
 python app.py
 ```
-You can then access the site on  http://127.0.0.1:5000
+You can then access the site on  http://0.0.0.0:5000
 
 ## Prerequisites
 
-Create a .env file with your OpenAI API key under 'openai_key' then install the packages below
-
-Apart from anaconda/miniconda's included packages all you need is 
-- rapidfuzz
-- fuzzywuzzy
-- langdetect
-- python-dotenv
-- requests
+Packages installed from the requirements.txt
