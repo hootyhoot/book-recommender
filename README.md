@@ -16,5 +16,5 @@ python app.py
 You can then access the site on  http://0.0.0.0:5000
 
 ## Prerequisites
-
-Packages installed from the requirements.txt
+- .env file with OpenAI API key under 'openai_key'
+- Packages installed from the requirements.txt
