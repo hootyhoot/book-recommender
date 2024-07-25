@@ -2,3 +2,5 @@
 /.env
 /Notes
 /Pre-process Steps/embeddings.csv
+/.zed
+/pyrightconfig.json

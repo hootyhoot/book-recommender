@@ -74,22 +74,22 @@ def get_recommendations_by_title(book_title):
     # fuzzy search for book title
     book_titles = df['Book'].tolist()
     matches = process.extract(book_title, book_titles, limit=5)
-    
+
     if matches[0][1] >= 90:  # If we have a close match (90% similarity or higher)
         matched_book = df[df['Book'] == matches[0][0]].iloc[0]
         ##matched_books = df [df['Book'] == matches [0][0]].iloc[0] ##array of books that have a higher than 90% similarity (e.g for sequels of books that includes the same titles, harry potter for instance has like 6 books with harry potter in them but you dont want a rec for harry potter 6 times)
         book_embedding = matched_book['embeddings']
-        
+
         # Calculate similarity scores
         similarity_scores = cosine_similarity([book_embedding], tfidf_matrix)
-        
+
         top_n = 15
         top_n_indices = similarity_scores[0].argsort()[-top_n:][::-1]
-        
+
         # Remove the matched book from recommendations
         recommended_books = df.iloc[top_n_indices]
         recommended_books = recommended_books[recommended_books['Book'] != matched_book['Book']]
-        
+
         return recommended_books[['Book', 'Author', 'Avg_Rating', 'URL']].to_dict('records')
     else:
         # Return potential matches for user to choose from
@@ -103,13 +103,13 @@ def index():
 def recommend():
     search_type = request.form['search_type']
     query = request.form['query']
-    
+
     if search_type == 'description':
         recommendations = get_recommendations_by_description(query)
     else:  # search_type == 'title'
         recommendations = get_recommendations_by_title(query)
-    
+
     return jsonify(recommendations)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=10000)
