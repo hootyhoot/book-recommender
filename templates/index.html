@@ -165,13 +165,13 @@
                         '<div class="book">' +
                         '<h3>' + book.Book + '</h3>' +
                         '<p>Author: ' + book.Author + '</p>' +
-                        '<p>Average Rating: ' + book.Avg_Rating + '</p>' +
+                        '<p>Average Rating: ' + book.Avg_Rating + '/5.00' + '</p>' +
                         '<p><a href="' + book.URL + '" target="_blank">More Info</a></p>' +
                         '</div>'
                     );
                 }
                 currentlyDisplayed = end;
-                
+
                 if (currentlyDisplayed >= allRecommendations.length) {
                     $('#show-more').hide();
                 } else {
@@ -195,7 +195,7 @@
                         $('#recommendations').empty();
                         $('#potential-matches').empty();
                         $('#show-more').hide();
-                        
+
                         if (data.length > 0 && 'similarity' in data[0]) {
                             $('#potential-matches').append('<h2>Potential Matches:</h2>');
                             data.forEach(function(match) {
