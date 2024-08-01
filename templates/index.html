@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- for ajax and post calls -->
     <title>Find Your Next Book!</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
@@ -135,6 +135,7 @@
     </style>
 </head>
 <body>
+    <!-- placeholder elements to be filled by ajax function call in js -->
     <div class="container">
         <h1 class="emoji">📚</h1>
         <h1>Want to try out new books?</h1>
@@ -154,6 +155,7 @@
 
     <script>
         $(document).ready(function() {
+            //initialising temp variables to hold returned recs from app.py
             let allRecommendations = [];
             let currentlyDisplayed = 0;
             const recommendationsPerPage = 5;

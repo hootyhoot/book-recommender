@@ -71,28 +71,28 @@ def get_recommendations_by_description(user_query):
     return recommended_books[['Book', 'Author', 'Avg_Rating', 'URL']].to_dict('records')
 
 def get_recommendations_by_title(book_title):
-    # fuzzy search for book title
+    #fuzzy search for book title
     book_titles = df['Book'].tolist()
     matches = process.extract(book_title, book_titles, limit=5)
 
-    if matches[0][1] >= 90:  # If we have a close match (90% similarity or higher)
+    if matches[0][1] >= 90:  #if we have a close match (90% similarity or higher)
         matched_book = df[df['Book'] == matches[0][0]].iloc[0]
         ##matched_books = df [df['Book'] == matches [0][0]].iloc[0] ##array of books that have a higher than 90% similarity (e.g for sequels of books that includes the same titles, harry potter for instance has like 6 books with harry potter in them but you dont want a rec for harry potter 6 times)
         book_embedding = matched_book['embeddings']
 
-        # Calculate similarity scores
+        #calc similarity scores
         similarity_scores = cosine_similarity([book_embedding], tfidf_matrix)
 
         top_n = 15
         top_n_indices = similarity_scores[0].argsort()[-top_n:][::-1]
 
-        # Remove the matched book from recommendations
+        #if book found removed from recs (dont want to show a book that the user wants a similar book to)
         recommended_books = df.iloc[top_n_indices]
         recommended_books = recommended_books[recommended_books['Book'] != matched_book['Book']]
 
         return recommended_books[['Book', 'Author', 'Avg_Rating', 'URL']].to_dict('records')
     else:
-        # Return potential matches for user to choose from
+        #return potential matches
         return [{'Book': match[0], 'similarity': match[1]} for match in matches]
 
 @app.route('/')
@@ -101,9 +101,11 @@ def index():
 
 @app.route('/recommend', methods=['POST'])
 def recommend():
-    search_type = request.form['search_type']
-    query = request.form['query']
+    #query-form
+    search_type = request.form['search_type'] #search_type select tag
+    query = request.form['query'] #query input tag
 
+    #called and returned in ajax
     if search_type == 'description':
         recommendations = get_recommendations_by_description(query)
     else:  # search_type == 'title'
