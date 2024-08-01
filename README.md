@@ -13,7 +13,7 @@ Run the app with
 ```bash
 python app.py
 ```
-You can then access the site on  http://0.0.0.0:5000
+You can then access the site on  http://0.0.0.0:10000
 
 ## Prerequisites
 - .env file with OpenAI API key under 'openai_key'
