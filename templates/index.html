@@ -28,6 +28,8 @@
         }
 
         .container {
+            position: relative;
+            posi
             background-color: white;
             padding: 40px;
             border-radius: var(--border-radius);
@@ -132,11 +134,57 @@
             margin-top: 20px;
             width: 100%;
         }
+
+        .help-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-size: 19px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.3s ease;
+        }
+
+        .help-button:hover {
+            background-color: #2980b9;
+        }
+
+        .help-text {
+            display: none;
+            position: absolute;
+            top: 50px;
+            right: 10px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            padding: 15px;
+            max-width: 300px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
     <!-- placeholder elements to be filled by ajax function call in js -->
     <div class="container">
+        <button class="help-button" id="helpBtn">?</button>
+        <div class="help-text" id="helpText">
+            <h3>To get the best book recommendations:</h3>
+            <ul>
+                <li>Describe the type of book you're looking for (e.g., "science fiction with time travel")</li>
+                <li>Include specific genres or settings you're interested in (e.g., "historical fiction set in ancient Rome")</li>
+                <li>Mention themes or elements you enjoy (e.g., "mystery novels with strong female leads")</li>
+                <li>You can also describe the mood or atmosphere you're seeking (e.g., "cozy mystery with humor")</li>
+            </ul>
+        </div>
         <h1 class="emoji">📚</h1>
         <h1>Want to try out new books?</h1>
         <form id="query-form">
@@ -232,6 +280,17 @@
 
             $('#show-more').click(function() {
                 displayRecommendations(currentlyDisplayed, currentlyDisplayed + recommendationsPerPage);
+            });
+
+            $('#helpBtn').click(function(e) {
+                e.stopPropagation();
+                $('#helpText').toggle();
+            });
+
+            $(document).click(function(e) {
+                if (!$(e.target).closest('#helpText').length && !$(e.target).closest('#helpBtn').length) {
+                    $('#helpText').hide();
+                }
             });
         });
     </script>
