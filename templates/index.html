@@ -219,7 +219,7 @@
                         '<p><a href="' + book.URL + '" target="_blank">More Info</a></p>' +
                         '</div>'
                     );
-                    newBook.clone().hide().appendTo('#recommendations').delay( i * 100).fadeIn(500);
+                    newBook.clone().hide().appendTo('#recommendations').delay( i * 100).slideDown("fast");
                 }
                 currentlyDisplayed = end;
 
