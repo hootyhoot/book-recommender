@@ -285,14 +285,14 @@
 
             $('#helpBtn').click(function(e) {
                 e.stopPropagation();
-                $('#helpText').toggle();
+                $('#helpText').toggle(speed="fast");
             });
 
             //this checks if the user clicks anywhere on the screen that is NOT the helptext itself
             $(document).click(function(e) {
                 //if the target of the click doesnt have the tag helpText and also doesnt have the tag helpBtn then hide the helpText
                 if (!$(e.target).closest('#helpText').length && !$(e.target).closest('#helpBtn').length) {
-                    $('#helpText').hide();
+                    $('#helpText').hide(speed="fast");
                 }
             });
         });
