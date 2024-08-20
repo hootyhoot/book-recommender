@@ -212,14 +212,14 @@
             function displayRecommendations(start, end) {
                 for (let i = start; i < end && i < allRecommendations.length; i++) {
                     const book = allRecommendations[i];
-                    $('#recommendations').append(
-                        '<div class="book">' +
+                    const newBook = $('<div class="book">' +
                         '<h3>' + book.Book + '</h3>' +
                         '<p>Author: ' + book.Author + '</p>' +
                         '<p>Average Rating: ' + book.Avg_Rating + '/5.00' + '</p>' +
                         '<p><a href="' + book.URL + '" target="_blank">More Info</a></p>' +
                         '</div>'
                     );
+                    newBook.clone().hide().appendTo('#recommendations').delay( i * 100).fadeIn(500);
                 }
                 currentlyDisplayed = end;
 
