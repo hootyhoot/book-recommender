@@ -75,7 +75,7 @@ def get_recommendations_by_title(book_title):
     book_titles = df['Book'].tolist()
     matches = process.extract(book_title, book_titles, limit=5)
 
-    if matches[0][1] >= 90:  #if we have a close match (90% similarity or higher)
+    if matches[0][1] >= 92:  #if we have a close match (90% similarity or higher)
         matched_book = df[df['Book'] == matches[0][0]].iloc[0]
         ##matched_books = df [df['Book'] == matches [0][0]].iloc[0] ##array of books that have a higher than 90% similarity (e.g for sequels of books that includes the same titles, harry potter for instance has like 6 books with harry potter in them but you dont want a rec for harry potter 6 times)
         book_embedding = matched_book['embeddings']
@@ -92,8 +92,16 @@ def get_recommendations_by_title(book_title):
 
         return recommended_books[['Book', 'Author', 'Avg_Rating', 'URL']].to_dict('records')
     else:
-        #return potential matches
-        return [{'Book': match[0], 'similarity': match[1]} for match in matches]
+        # return potential matches with Author
+        potential_matches = []
+        for match in matches:
+            book_info = df[df['Book'] == match[0]].iloc[0]
+            potential_matches.append({
+                'Book': match[0],
+                'similarity': match[1],
+                'Author': book_info['Author']
+            })
+        return potential_matches
 
 @app.route('/')
 def index():

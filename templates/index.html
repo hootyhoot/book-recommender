@@ -31,6 +31,8 @@
             position: relative;
             background-color: white;
             padding: 40px;
+            padding-top: 60px;
+            padding-bottom: 60px;
             border-radius: var(--border-radius);
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             max-width: 600px;
@@ -39,7 +41,7 @@
 
         .emoji {
             font-size: 60px;
-            margin-top: 10px;
+            margin-top: -10px;
             margin-bottom: -20px;
         }
 
@@ -98,6 +100,13 @@
 
         #recommendations, #potential-matches {
             margin-top: 30px;
+            padding: 10px;
+        }
+
+        #recommendations h2, #recommendations h3, #recommendations p,
+        #potential-matches h2, #potential-matches h3, #potential-matches p {
+            line-height: 1.5;
+            margin: 0;
         }
 
         .book, .potential-match {
@@ -131,6 +140,12 @@
         }
 
         #show-more {
+            display: none;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        #not-in-list {
             display: none;
             margin-top: 20px;
             width: 100%;
@@ -197,9 +212,10 @@
             <button type="submit" id="submit-btn">Get Recommendations</button>
         </form>
         <div id="loading">Processing...</div>
-        <div id="potential-matches"></div>
-        <div id="recommendations"></div>
+        <div id="potential-matches" style="display: none;"></div>
+        <div id="recommendations" style="display: none;"></div>
         <button id="show-more" style="display: none;">Show More</button>
+        <button id="not-in-list" style="display: none;">Book not in this list?</button>
     </div>
 
     <script>
@@ -213,8 +229,8 @@
                 for (let i = start; i < end && i < allRecommendations.length; i++) {
                     const book = allRecommendations[i];
                     const newBook = $('<div class="book">' +
-                        '<h3>' + book.Book + '</h3>' +
-                        '<p>Author: ' + book.Author + '</p>' +
+                        '<h2>' + book.Book + '</h2>' +
+                        '<h3>' + book.Author + '</h3>' +
                         '<p>Average Rating: ' + book.Avg_Rating + '/5.00' + '</p>' +
                         '<p><a href="' + book.URL + '" target="_blank">More Info</a></p>' +
                         '</div>'
@@ -222,6 +238,7 @@
                     newBook.clone().hide().appendTo('#recommendations').delay((end-start)*20).slideDown("fast");
                 }
                 currentlyDisplayed = end;
+                $('#recommendations').show();
 
                 if (currentlyDisplayed >= allRecommendations.length) {
                     $('#show-more').hide();
@@ -245,17 +262,23 @@
                     success: function(data) {
                         $('#recommendations').empty();
                         $('#potential-matches').empty();
+                        $('#recommendations').hide();
+                        $('#potential-matches').hide();
                         $('#show-more').hide();
+                        $('#not-in-list').hide();
 
                         if (data.length > 0 && 'similarity' in data[0]) {
                             $('#potential-matches').append('<h2>Potential Matches:</h2>');
                             data.forEach(function(match) {
                                 $('#potential-matches').append(
                                     '<div class="potential-match" data-title="' + match.Book + '">' +
-                                    '<h3>' + match.Book + '</h3>' +
+                                    '<h2>' + match.Book + '</h2>' +
+                                    '<h3>' + match.Author + '</h3>' +
                                     '<p>Similarity: ' + match.similarity + '%</p>' +
                                     '</div>'
                                 );
+                                $('#potential-matches').show();
+                                $('#not-in-list').show();
                             });
                         } else {
                             allRecommendations = data;
