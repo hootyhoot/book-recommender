@@ -48,7 +48,7 @@
         h1 {
             text-align: center;
             color: var(--primary-color);
-            margin-bottom: 30px;
+            margin-bottom: 15px;
         }
 
         #query-form {
@@ -151,20 +151,23 @@
             width: 100%;
         }
 
+        .help-section {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
         .help-button {
-            position: absolute;
-            top: 10px;
-            right: 10px;
             background-color: var(--accent-color);
             color: white;
             border: none;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            font-size: 19px;
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 14px;
             cursor: pointer;
             display: flex;
-            justify-content: center;
             align-items: center;
             transition: background-color 0.3s ease;
         }
@@ -173,36 +176,67 @@
             background-color: #2980b9;
         }
 
+        .help-button-icon {
+        }
+
         .help-text {
             display: none;
             position: absolute;
-            top: 50px;
-            right: 10px;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
             background-color: white;
             border: 1px solid #ddd;
             border-radius: var(--border-radius);
             padding: 15px;
-            max-width: 300px;
+            width: 300px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             z-index: 1000;
+            margin-top: 10px;
+        }
+
+        .help-text::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 0 10px 10px 10px;
+            border-style: solid;
+            border-color: transparent transparent #ddd transparent;
+        }
+
+        .help-text::after {
+            content: '';
+            position: absolute;
+            top: -9px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 0 9px 9px 9px;
+            border-style: solid;
+            border-color: transparent transparent white transparent;
         }
     </style>
 </head>
 <body>
     <!-- placeholder elements to be filled by ajax function call in js -->
     <div class="container">
-        <button class="help-button" id="helpBtn">?</button>
-        <div class="help-text" id="helpText">
-            <h3>To get the best book recommendations:</h3>
-            <ul>
-                <li>Describe the type of book you're looking for (e.g., "science fiction with time travel")</li>
-                <li>Include specific genres or settings you're interested in (e.g., "historical fiction set in ancient Rome")</li>
-                <li>Mention themes or elements you enjoy (e.g., "mystery novels with strong female leads")</li>
-                <li>You can also describe the mood or atmosphere you're seeking (e.g., "cozy mystery with humor")</li>
-            </ul>
-        </div>
         <h1 class="emoji">📚</h1>
         <h1>Want to try out new books?</h1>
+        <div class="help-section">
+            <button class="help-button" id="helpBtn">
+                <span class="help-button-icon">How do I use this?</span>
+            </button>
+            <div class="help-text" id="helpText">
+                <h3>To get the best book recommendations:</h3>
+                <ul>
+                    <li>Describe the type of book you're looking for (e.g., "science fiction with time travel")</li>
+                    <li>Mention themes or elements you enjoy (e.g., "mystery novels with strong female leads")</li>
+                    <li>Include specific genres or settings you're interested in (e.g., "historical fiction set in ancient Rome")</li>
+                    <li>You can also describe the mood or atmosphere you're seeking (e.g., "cozy mystery with humor")</li>
+                </ul>
+            </div>
+        </div>
         <form id="query-form">
             <select id="search-type" name="search_type">
                 <option value="description">Recommend by Book Description</option>
