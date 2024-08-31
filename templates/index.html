@@ -99,7 +99,7 @@
         }
 
         #recommendations, #potential-matches {
-            margin-top: 30px;
+            margin-top: 5px;
             padding: 10px;
         }
 
@@ -216,6 +216,27 @@
             border-style: solid;
             border-color: transparent transparent white transparent;
         }
+
+        #sort-options {
+            display: flex;
+            /*position: relative;
+            left: 10px;*/
+            justify-content: center;
+            width: auto;
+            margin-top: 15px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            align-content: center;
+        }
+
+        #sort-select {
+            padding: 8px;
+            padding-right: 30px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 14px;
+            background-color: white;
+        }i
     </style>
 </head>
 <body>
@@ -230,9 +251,9 @@
             <div class="help-text" id="helpText">
                 <h3>To get the best book recommendations:</h3>
                 <ul>
+                    <li>Include specific genres or settings you're interested in (e.g., "historical fiction set in ancient Rome")</li>
                     <li>Describe the type of book you're looking for (e.g., "science fiction with time travel")</li>
                     <li>Mention themes or elements you enjoy (e.g., "mystery novels with strong female leads")</li>
-                    <li>Include specific genres or settings you're interested in (e.g., "historical fiction set in ancient Rome")</li>
                     <li>You can also describe the mood or atmosphere you're seeking (e.g., "cozy mystery with humor")</li>
                 </ul>
             </div>
@@ -247,6 +268,13 @@
         </form>
         <div id="loading">Processing...</div>
         <div id="potential-matches" style="display: none;"></div>
+        <div id="sort-options" style="display: none;">
+            <select id="sort-select">
+                <option value="default">Sort by: Default</option>
+                <option value="author">Sort by: Author Name</option>
+                <option value="rating">Sort by: Average Rating</option>
+            </select>
+        </div>
         <div id="recommendations" style="display: none;"></div>
         <button id="show-more" style="display: none;">Show More</button>
         <button id="not-in-list" style="display: none;">Book not in this list?</button>
@@ -255,6 +283,7 @@
     <script>
         $(document).ready(function() {
             //initialising temp variables to hold returned recs from app.py
+            let originalRecommendations = [];
             let allRecommendations = [];
             let currentlyDisplayed = 0;
             const recommendationsPerPage = 5;
@@ -273,13 +302,46 @@
                 }
                 currentlyDisplayed = end;
                 $('#recommendations').show();
+                $('#sort-options').show();
+                $('#sort-select').show();
 
                 if (currentlyDisplayed >= allRecommendations.length) {
                     $('#show-more').hide();
                 } else {
                     $('#show-more').show(speed="slow");
                 }
+
+                $('#sort-options').css('opacity', 0).show().animate({opacity: 1}, 500);
             }
+
+            function sortRecommendations(sortBy) {
+                switch(sortBy) {
+                    case 'author':
+                        allRecommendations.sort((a, b) => a.Author.localeCompare(b.Author));
+                        break;
+                    case 'rating':
+                        allRecommendations.sort((a, b) => b.Avg_Rating - a.Avg_Rating);
+                        break;
+                    case 'default':
+                        allRecommendations = originalRecommendations.map(item => ({ ...item }));
+                        displayRecommendations(0, recommendationsPerPage);
+                        break;
+                }
+
+                // Store current scroll position
+                const scrollPosition = $(window).scrollTop();
+
+                // Fade out current recommendations
+                $('#recommendations').fadeOut(300, function() {
+                    $('#recommendations').empty();
+                    currentlyDisplayed = 5;
+                    displayRecommendations(0, currentlyDisplayed);
+                });
+            }
+
+            $('#sort-select').change(function() {
+                sortRecommendations($(this).val());
+            });
 
             $('#query-form').submit(function(e) {
                 e.preventDefault();
@@ -315,8 +377,10 @@
                                 $('#not-in-list').show();
                             });
                         } else {
-                            allRecommendations = data;
+                            originalRecommendations = data.map(item => ({ ...item }));
+                            allRecommendations = data.map(item => ({ ...item }));
                             displayRecommendations(0, recommendationsPerPage);
+                            $('#sort-select').val('default');
                         }
                     },
                     error: function() {
