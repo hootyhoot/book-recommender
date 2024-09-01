@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, url_for, send_from_directory
 import pandas as pd
 import nltk
 from nltk.corpus import stopwords
@@ -106,6 +106,18 @@ def get_recommendations_by_title(book_title):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(app.static_folder, 'favicon.ico')
+
+@app.route('/apple-touch-icon.png')
+def apple_touch_icon():
+    return send_from_directory(app.static_folder, 'apple-touch-icon.png')
+
+@app.route('/apple-touch-icon-precomposed.png')
+def apple_touch_icon_precomposed():
+    return send_from_directory(app.static_folder, 'apple-touch-icon-precomposed.png')
 
 @app.route('/recommend', methods=['POST'])
 def recommend():
