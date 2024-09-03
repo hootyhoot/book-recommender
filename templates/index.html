@@ -280,7 +280,7 @@
         <div id="potential-matches" style="display: none;"></div>
         <div id="sort-options" style="display: none;">
             <select id="sort-select">
-                <option value="default">Sort by: Default</option>
+                <option value="default">Sort by: Relevance</option>
                 <option value="author">Sort by: Author Name</option>
                 <option value="rating">Sort by: Average Rating</option>
             </select>
@@ -342,7 +342,7 @@
                 const scrollPosition = $(window).scrollTop();
 
                 // Fade out current recommendations
-                $('#recommendations').fadeOut(300, function() {
+                $('#recommendations').slideUp("slow", function() {
                     $('#recommendations').empty();
                     currentlyDisplayed = 5;
                     displayRecommendations(0, currentlyDisplayed);
@@ -351,6 +351,10 @@
 
             $('#sort-select').change(function() {
                 sortRecommendations($(this).val());
+            });
+
+            $('#search-type').change(function() {
+                $('#query').val("");
             });
 
             $('#query-form').submit(function(e) {
@@ -374,7 +378,7 @@
                         $('#not-in-list').hide();
 
                         if (data.length > 0 && 'similarity' in data[0]) {
-                            $('#potential-matches').append('<h2>Potential Matches:</h2>');
+                            $('#potential-matches').append("<h2>We couldn't find the exact book, which of these is closest?:</h2>");
                             data.forEach(function(match) {
                                 $('#potential-matches').append(
                                     '<div class="potential-match" data-title="' + match.Book + '">' +
