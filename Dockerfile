@@ -4,19 +4,29 @@ FROM python:3.8.18-alpine3.18 AS builder
 # Install build dependencies
 RUN apk add --no-cache \
     gcc \
+    g++ \
     musl-dev \
     linux-headers \
-    g++ \
     libffi-dev \
     openssl-dev \
+    python3-dev \
+    py3-pip \
+    make \
+    cmake \
+    build-base \
     cargo \
-    rust
+    rust \
+    postgresql-dev \
+    libc-dev
 
 # Set working directory
 WORKDIR /app
 
 # Copy requirements first for better caching
 COPY requirements.txt .
+
+# Upgrade pip and install wheel first
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
 # Install Python dependencies with no cache
 RUN pip install --no-cache-dir --user -r requirements.txt
