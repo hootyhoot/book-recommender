@@ -47,61 +47,109 @@ def preprocess_text(text):
     return ' '.join(tokens)
 
 def get_openai_embedding(text):
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f"Bearer {os.getenv('openai_key')}",
-    }
-    data = {
-        "input": text,
-        "model": "text-embedding-3-small"
-    }
-    response = requests.post('https://api.openai.com/v1/embeddings', headers=headers, json=data)
-    return response.json()['data'][0]['embedding']
+    try:
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f"Bearer {os.getenv('openai_key')}",
+        }
+        data = {
+            "input": text,
+            "model": "text-embedding-3-small"
+        }
+        response = requests.post('https://api.openai.com/v1/embeddings', headers=headers, json=data, timeout=30)
+        response.raise_for_status()  # Raises HTTPError for bad responses
+        
+        result = response.json()
+        
+        # Check if the response has the expected structure
+        if 'data' not in result or len(result['data']) == 0:
+            raise ValueError("OpenAI API returned unexpected response format")
+        
+        return result['data'][0]['embedding']
+    
+    except requests.exceptions.Timeout:
+        raise Exception("OpenAI API request timed out. Please try again.")
+    except requests.exceptions.ConnectionError:
+        raise Exception("Failed to connect to OpenAI API. Please check your internet connection.")
+    except requests.exceptions.HTTPError as e:
+        if response.status_code == 401:
+            raise Exception("Invalid OpenAI API key. Please check your credentials.")
+        elif response.status_code == 429:
+            raise Exception("OpenAI API rate limit exceeded. Please try again later.")
+        elif response.status_code == 500:
+            raise Exception("OpenAI API is experiencing issues. Please try again later.")
+        else:
+            raise Exception(f"OpenAI API error: {response.status_code} - {response.text}")
+    except KeyError:
+        raise Exception("Unexpected response format from OpenAI API")
+    except Exception as e:
+        raise Exception(f"Error getting embedding: {str(e)}")
 
 def preprocess_query(query):
     return preprocess_text(query)
 
 def get_recommendations_by_description(user_query):
-    cleaned_query = preprocess_query(user_query)
-    query_embedding = get_openai_embedding(cleaned_query)
-    similarity_scores = cosine_similarity([query_embedding], tfidf_matrix)
-    top_n = 15
-    top_n_indices = similarity_scores[0].argsort()[-top_n:][::-1]
-    recommended_books = df.iloc[top_n_indices]
-    return recommended_books[['Book', 'Author', 'Avg_Rating', 'URL']].to_dict('records')
-
-def get_recommendations_by_title(book_title):
-    #fuzzy search for book title
-    book_titles = df['Book'].tolist()
-    matches = process.extract(book_title, book_titles, limit=5)
-
-    if matches[0][1] >= 92:  #if we have a close match (90% similarity or higher)
-        matched_book = df[df['Book'] == matches[0][0]].iloc[0]
-        ##matched_books = df [df['Book'] == matches [0][0]].iloc[0] ##array of books that have a higher than 90% similarity (e.g for sequels of books that includes the same titles, harry potter for instance has like 6 books with harry potter in them but you dont want a rec for harry potter 6 times)
-        book_embedding = matched_book['embeddings']
-
-        #calc similarity scores
-        similarity_scores = cosine_similarity([book_embedding], tfidf_matrix)
-
+    try:
+        if not user_query or user_query.strip() == "":
+            raise ValueError("Please enter a description to search")
+        
+        cleaned_query = preprocess_query(user_query)
+        
+        if not cleaned_query or cleaned_query.strip() == "":
+            raise ValueError("Your query didn't contain any meaningful words. Please try a different description.")
+        
+        query_embedding = get_openai_embedding(cleaned_query)
+        similarity_scores = cosine_similarity([query_embedding], tfidf_matrix)
         top_n = 15
         top_n_indices = similarity_scores[0].argsort()[-top_n:][::-1]
-
-        #if book found removed from recs (dont want to show a book that the user wants a similar book to)
         recommended_books = df.iloc[top_n_indices]
-        recommended_books = recommended_books[recommended_books['Book'] != matched_book['Book']]
-
         return recommended_books[['Book', 'Author', 'Avg_Rating', 'URL']].to_dict('records')
-    else:
-        # return potential matches with Author
-        potential_matches = []
-        for match in matches:
-            book_info = df[df['Book'] == match[0]].iloc[0]
-            potential_matches.append({
-                'Book': match[0],
-                'similarity': match[1],
-                'Author': book_info['Author']
-            })
-        return potential_matches
+    
+    except ValueError as e:
+        raise Exception(str(e))
+    except Exception as e:
+        raise Exception(f"Error processing description search: {str(e)}")
+
+def get_recommendations_by_title(book_title):
+    try:
+        if not book_title or book_title.strip() == "":
+            raise ValueError("Please enter a book title to search")
+        
+        # Fuzzy search for book title
+        book_titles = df['Book'].tolist()
+        matches = process.extract(book_title, book_titles, limit=5)
+
+        if matches[0][1] >= 92:  # If we have a close match (92% similarity or higher)
+            matched_book = df[df['Book'] == matches[0][0]].iloc[0]
+            book_embedding = matched_book['embeddings']
+
+            # Calculate similarity scores
+            similarity_scores = cosine_similarity([book_embedding], tfidf_matrix)
+
+            top_n = 15
+            top_n_indices = similarity_scores[0].argsort()[-top_n:][::-1]
+
+            # Remove the matched book from recommendations
+            recommended_books = df.iloc[top_n_indices]
+            recommended_books = recommended_books[recommended_books['Book'] != matched_book['Book']]
+
+            return recommended_books[['Book', 'Author', 'Avg_Rating', 'URL']].to_dict('records')
+        else:
+            # Return potential matches with Author
+            potential_matches = []
+            for match in matches:
+                book_info = df[df['Book'] == match[0]].iloc[0]
+                potential_matches.append({
+                    'Book': match[0],
+                    'similarity': match[1],
+                    'Author': book_info['Author']
+                })
+            return potential_matches
+    
+    except ValueError as e:
+        raise Exception(str(e))
+    except Exception as e:
+        raise Exception(f"Error processing title search: {str(e)}")
 
 @app.route('/')
 def index():
@@ -121,17 +169,38 @@ def apple_touch_icon_precomposed():
 
 @app.route('/recommend', methods=['POST'])
 def recommend():
-    #query-form
-    search_type = request.form['search_type'] #search_type select tag
-    query = request.form['query'] #query input tag
+    try:
+        # Get form data
+        search_type = request.form.get('search_type')
+        query = request.form.get('query')
+        
+        # Validate inputs
+        if not search_type:
+            return jsonify({'error': 'Please select a search type'}), 400
+        
+        if not query:
+            return jsonify({'error': 'Please enter a search query'}), 400
+        
+        # Process based on search type
+        if search_type == 'description':
+            recommendations = get_recommendations_by_description(query)
+        elif search_type == 'title':
+            recommendations = get_recommendations_by_title(query)
+        else:
+            return jsonify({'error': 'Invalid search type'}), 400
 
-    #called and returned in ajax
-    if search_type == 'description':
-        recommendations = get_recommendations_by_description(query)
-    else:  # search_type == 'title'
-        recommendations = get_recommendations_by_title(query)
-
-    return jsonify(recommendations)
+        return jsonify(recommendations)
+    
+    except Exception as e:
+        # Log the error for debugging
+        app.logger.error(f"Error in /recommend: {str(e)}")
+        
+        # Return user-friendly error message
+        error_message = str(e)
+        if not error_message or error_message == "":
+            error_message = "An unexpected error occurred. Please try again."
+        
+        return jsonify({'error': error_message}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
