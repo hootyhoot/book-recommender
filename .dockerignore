@@ -23,3 +23,8 @@ data/
 *.pth
 *.pt
 *.ckpt
+
+# Not needed by the running app — only used offline to build embeddings.parquet
+Pre-process Steps/
+Documentation/
+requirements.txt

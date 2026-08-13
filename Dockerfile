@@ -11,21 +11,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
-COPY requirements.txt .
+COPY requirements-render.txt .
 
 # Create virtual environment
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Install PyTorch CPU-only first (much smaller than CUDA version)
-RUN pip install --no-cache-dir \
-    torch==2.3.1+cpu \
-    torchvision==0.18.1+cpu \
-    torchaudio==2.3.1+cpu \
-    --index-url https://download.pytorch.org/whl/cpu
+# Install dependencies (runtime-only set; app.py never imports torch/transformers)
+RUN pip install --no-cache-dir -r requirements-render.txt
 
-# Install remaining dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Pre-download NLTK corpora at build time instead of on every container start,
+# straight into the venv so it comes along with the COPY --from=builder below.
+ENV NLTK_DATA=/opt/venv/nltk_data
+RUN python -m nltk.downloader -d /opt/venv/nltk_data punkt stopwords wordnet && \
+    python -c "import zipfile; zipfile.ZipFile('/opt/venv/nltk_data/corpora/wordnet.zip').extractall('/opt/venv/nltk_data/corpora/')"
 
 # Remove unnecessary files from venv
 RUN find /opt/venv -name "*.pyc" -delete && \
@@ -46,7 +45,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set working directory
 WORKDIR /app
 
-# Copy only the virtual environment from builder
+# Copy only the virtual environment (includes pre-downloaded NLTK data) from builder
 COPY --from=builder /opt/venv /opt/venv
 
 # Copy application code
@@ -54,6 +53,7 @@ COPY . .
 
 # Set environment to use the venv
 ENV PATH="/opt/venv/bin:$PATH"
+ENV NLTK_DATA=/opt/venv/nltk_data
 
 # Run the application
 CMD ["python", "app.py"]

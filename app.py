@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify, url_for, send_from_directory
 import pandas as pd
+import numpy as np
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
@@ -15,15 +16,33 @@ app = Flask(__name__)
 
 load_dotenv()
 
-# Download necessary NLTK data files
-nltk.download('punkt')
-nltk.download('stopwords')
-nltk.download('wordnet')
+# NLTK data is pre-downloaded once at build time (see the build command:
+# `python -m nltk.downloader -d ./nltk_data ...`) into a folder next to this
+# file, so containers never need network access for it on cold start.
+# Adding it to nltk's search path explicitly avoids depending on cwd or an
+# env var being set correctly by the host.
+_nltk_data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nltk_data')
+if os.path.isdir(_nltk_data_dir):
+    nltk.data.path.append(_nltk_data_dir)
 
-# Load preprocessed data with embeddings
+# Local-dev fallback for when that data isn't already present (e.g. running
+# app.py directly without having run the build command first).
+for _resource, _path in [('punkt', 'tokenizers/punkt'), ('stopwords', 'corpora/stopwords'), ('wordnet', 'corpora/wordnet')]:
+    try:
+        nltk.data.find(_path)
+    except LookupError:
+        nltk.download(_resource)
+
+# Load preprocessed data with embeddings.
+# The embeddings column comes out of parquet as a column of per-row numpy
+# arrays; a plain `.tolist()` blows that up into ~9700 * 1536 individual
+# Python float objects (~400MB) on top of the DataFrame's own copy. Pull it
+# into one compact float32 matrix instead and drop it from the DataFrame,
+# which is the difference between comfortably fitting in 512MB and not.
 df = pd.read_parquet('embeddings.parquet')
+tfidf_matrix = np.array(df['embeddings'].tolist(), dtype=np.float32)
+df = df.drop(columns=['embeddings']).reset_index(drop=True)
 df.info(verbose=False, memory_usage="deep")
-tfidf_matrix = df['embeddings'].tolist()
 
 # Initialize lemmatizer
 lemmatizer = WordNetLemmatizer()
@@ -120,8 +139,9 @@ def get_recommendations_by_title(book_title):
         matches = process.extract(book_title, book_titles, limit=5)
 
         if matches[0][1] >= 92:  # If we have a close match (92% similarity or higher)
-            matched_book = df[df['Book'] == matches[0][0]].iloc[0]
-            book_embedding = matched_book['embeddings']
+            matched_position = np.where((df['Book'] == matches[0][0]).values)[0][0]
+            matched_book = df.iloc[matched_position]
+            book_embedding = tfidf_matrix[matched_position]
 
             # Calculate similarity scores
             similarity_scores = cosine_similarity([book_embedding], tfidf_matrix)
@@ -203,4 +223,4 @@ def recommend():
         return jsonify({'error': error_message}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
