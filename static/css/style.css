@@ -69,6 +69,14 @@
 
 * , *::before, *::after { box-sizing: border-box; }
 
+/* The shelf pull-outs intentionally bleed outside their own narrow box
+   (see .shelf-wrap-inner's clip-path below) - that's meant to stay
+   inside the viewport, but a stray sticky-hover state on mobile (tapping
+   a link can leave :hover applied until you tap elsewhere) could still
+   register as real scrollable width without this, letting the page
+   pan/zoom sideways. */
+html { overflow-x: hidden; }
+
 body {
   margin: 0;
   background: var(--bg);
@@ -236,6 +244,7 @@ main { display: block; padding: 2.5rem 0 5rem; }
 
 .hero-stats {
   display: flex;
+  justify-content: center;
   gap: 1.5rem;
   flex-wrap: wrap;
   border: 1px solid var(--border);
@@ -244,7 +253,7 @@ main { display: block; padding: 2.5rem 0 5rem; }
   padding: 1rem 1.25rem;
   margin-top: 1.25rem;
 }
-.hero-stat { display: flex; flex-direction: column; gap: .15rem; }
+.hero-stat { display: flex; flex-direction: column; align-items: center; gap: .15rem; text-align: center; }
 .hero-stat-value { font-family: var(--font-display); font-size: 1.8rem; font-weight: 800; color: var(--role-active); line-height: 1; }
 .hero-stat-label { font-family: var(--font-mono); font-size: .68rem; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .08em; }
 
@@ -262,7 +271,10 @@ main { display: block; padding: 2.5rem 0 5rem; }
   padding: 1.25rem;
   box-shadow: 0 0 24px -10px var(--role-active);
 }
-.currently-reading-panel .cover { flex: 0 0 auto; width: 90px; aspect-ratio: 2/3; border-radius: 2px; overflow: hidden; background: var(--surface-raised); border: 1px solid var(--border); }
+/* Sized from the book's real cover_ratio (fixed height, width follows)
+   instead of a forced 2:3 box - a forced ratio with object-fit:cover
+   crops the sides off anything narrower/taller than 2:3. */
+.currently-reading-panel .cover { flex: 0 0 auto; height: 130px; width: calc(130px * var(--ratio, .667)); border-radius: 2px; overflow: hidden; background: var(--surface-raised); border: 1px solid var(--border); }
 .currently-reading-panel .cover img { width: 100%; height: 100%; object-fit: cover; }
 .currently-reading-panel .info { min-width: 0; }
 .currently-reading-panel .book-title { font-family: var(--font-body); font-weight: 600; font-size: 1.15rem; margin: 0 0 .2rem; color: var(--ink); }
@@ -329,7 +341,7 @@ main { display: block; padding: 2.5rem 0 5rem; }
   box-shadow: 0 8px 18px -8px rgba(0,0,0,.5);
   transition: transform .18s ease, border-color .18s ease;
 }
-.favorite-book:hover .cover { transform: translateY(-3px); border-color: var(--role-highlight); }
+.favorite-book:hover .cover, .favorite-book.touch-open .cover { transform: translateY(-3px); border-color: var(--role-highlight); }
 .favorite-book .cover img { width: 100%; height: 100%; object-fit: cover; }
 
 @media (max-width: 500px) {
@@ -415,7 +427,7 @@ main { display: block; padding: 2.5rem 0 5rem; }
    aspect ratio matches the image exactly - object-fit:cover then shows
    the whole cover with zero crop instead of forcing a fixed 2:3 frame
    that clips tall or wide covers. */
-.book-spine:hover .spine-body, .book-spine:focus-visible .spine-body {
+.book-spine:hover .spine-body, .book-spine:focus-visible .spine-body, .book-spine.touch-open .spine-body {
   width: calc(var(--spine-h) * var(--ratio, .667));
   transform: rotate(-4deg) translateY(-10px);
   box-shadow: 0 18px 30px -10px rgba(0,0,0,.6);
@@ -447,7 +459,7 @@ main { display: block; padding: 2.5rem 0 5rem; }
   text-overflow: ellipsis;
   transition: opacity .2s ease;
 }
-.book-spine:hover .spine-title, .book-spine:focus-visible .spine-title { opacity: 0; }
+.book-spine:hover .spine-title, .book-spine:focus-visible .spine-title, .book-spine.touch-open .spine-title { opacity: 0; }
 
 /* Text color/scrim picked per-book from the actual sampled luminance of
    the cover strip underneath (see spine_text_color in
@@ -489,8 +501,8 @@ main { display: block; padding: 2.5rem 0 5rem; }
   z-index: 999;
 }
 .spine-caption strong { display: block; color: var(--ink); font-weight: 600; }
-.book-spine:hover .spine-caption, .book-spine:focus-visible .spine-caption,
-.favorite-book:hover .spine-caption, .favorite-book:focus-visible .spine-caption { opacity: 1; }
+.book-spine:hover .spine-caption, .book-spine:focus-visible .spine-caption, .book-spine.touch-open .spine-caption,
+.favorite-book:hover .spine-caption, .favorite-book:focus-visible .spine-caption, .favorite-book.touch-open .spine-caption { opacity: 1; }
 
 @media (max-width: 500px) {
   .shelf { --spine-h: 140px; --spine-w: 26px; --spine-gap: 46px; }

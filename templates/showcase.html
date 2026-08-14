@@ -46,7 +46,7 @@
 </div>
 {% if data.currently_reading %}
     {% for book in data.currently_reading %}
-    <a class="currently-reading-panel" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:flex;">
+    <a class="currently-reading-panel" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:flex; --ratio: {{ book.cover_ratio|default(0.667) }};">
         <div class="cover">{% if book.cover_url %}<img src="{{ book.cover_url }}" alt="{{ book.title }}" loading="eager">{% endif %}</div>
         <div class="info">
             <p class="book-title">{{ book.title }}</p>
