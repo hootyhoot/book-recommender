@@ -24,7 +24,7 @@
   --font-mono: "IBM Plex Mono", monospace;
 
   --radius: 3px;
-  --max-width: 900px;
+  --max-width: 1240px;
 
   color-scheme: dark;
 }
@@ -271,18 +271,20 @@ main { display: block; padding: 2.5rem 0 5rem; }
 .empty-state { color: var(--ink-muted); font-family: var(--font-mono); font-size: .85rem; }
 
 /* Favorites: unlike the spine shelves below, these always show the full
-   front cover (no spine crop, no hover reveal) with noticeably wider
-   gaps between books - closer to how StoryGraph's own favorites row
-   reads, a small showcased set rather than a packed shelf. Still sits
-   on the same wood ledge for visual consistency with the rest of the
-   page, but the ledge is thin and sits right under the covers only, so
-   the caption below each book always has a plain background. */
+   front cover (no spine crop, no hover reveal, no caption - just the
+   covers) with noticeably wider gaps between books - closer to how
+   StoryGraph's own favorites row reads, a small showcased set rather
+   than a packed shelf. Cover widths vary per book (real aspect ratio),
+   so unlike the uniform-width spine shelves this centers via plain flex
+   justify-content - fine at showcase scale, and wraps automatically as
+   more favorites get added. Still sits on the same wood ledge for
+   visual consistency with the rest of the page. */
 .favorites-shelf {
-  --fav-h: 168px;
-  --fav-cap-h: 42px;
-  --fav-gap: 30px;
+  --fav-h: 220px;
+  --fav-gap: 40px;
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   align-items: flex-end;
   column-gap: var(--fav-gap);
   row-gap: var(--fav-gap);
@@ -299,15 +301,14 @@ main { display: block; padding: 2.5rem 0 5rem; }
     var(--shelf-shadow) calc(var(--fav-h) + 12px),
     var(--shelf-shadow) calc(var(--fav-h) + 16px),
     transparent calc(var(--fav-h) + 16px),
-    transparent calc(var(--fav-h) + var(--fav-cap-h) + var(--fav-gap))
+    transparent calc(var(--fav-h) + var(--fav-gap))
   );
-  background-size: 100% calc(var(--fav-h) + var(--fav-cap-h) + var(--fav-gap));
+  background-size: 100% calc(var(--fav-h) + var(--fav-gap));
   background-repeat: repeat-y;
 }
 
 .favorite-book {
-  display: flex;
-  flex-direction: column;
+  display: block;
   width: calc(var(--fav-h) * var(--ratio, .667));
   color: var(--ink);
 }
@@ -323,26 +324,9 @@ main { display: block; padding: 2.5rem 0 5rem; }
 }
 .favorite-book:hover .cover { transform: translateY(-3px); border-color: var(--role-highlight); }
 .favorite-book .cover img { width: 100%; height: 100%; object-fit: cover; }
-.favorite-book .cap {
-  height: var(--fav-cap-h);
-  padding-top: .4rem;
-  font-family: var(--font-mono);
-  font-size: .68rem;
-  line-height: 1.3;
-  color: var(--ink-muted);
-  overflow: hidden;
-}
-.favorite-book .cap strong,
-.favorite-book .cap .author {
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.favorite-book .cap strong { color: var(--ink); font-weight: 600; }
 
 @media (max-width: 500px) {
-  .favorites-shelf { --fav-h: 128px; --fav-gap: 20px; }
+  .favorites-shelf { --fav-h: 150px; --fav-gap: 22px; }
 }
 
 /* Bookshelf: real spines (a genuine narrow slice of each book's own cover
@@ -355,23 +339,26 @@ main { display: block; padding: 2.5rem 0 5rem; }
    Bookshelf) - revealing more of that same image as it grows, so the
    full cover is literally the spine's own art, not a swapped-in asset. */
 .shelf {
-  --spine-h: 150px;
-  --spine-w: 30px;
-  --spine-gap: 34px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  column-gap: 2px;
+  --spine-h: 200px;
+  --spine-w: 40px;
+  --spine-gap: 44px;
+  /* Grid, not flex: with a uniform fixed column width, auto-fill
+     computes exactly how many columns fit and justify-content:center
+     centers that whole block of tracks - each row still fills
+     left-to-right in normal order, so a partial last row sits at the
+     left edge of the centered block instead of being centered on its
+     own (which flex's justify-content:center would do per row). */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, var(--spine-w));
+  justify-content: center;
+  align-content: end;
+  column-gap: 3px;
   row-gap: var(--spine-gap);
   /* Bottom padding is room for the last row's hover pull-out + caption;
      top room comes from the wrapper's margin below, not padding here,
      since padding would sit inside this box's own background-painted
-     area and the repeating ledge pattern would bleed upward into it.
-     Left/right padding makes the ledge overhang the books slightly on
-     both ends, like a real plank longer than what's sitting on it -
-     without it the left edge sat flush with zero overshoot while a
-     partially-filled last row already overshot on the right. */
-  padding: 0 14px 48px;
+     area and the repeating ledge pattern would bleed upward into it. */
+  padding: 0 0 48px;
   margin-top: 22px;
   /* Ledge sits flush against the book bottoms (no gap) and reads wood-
      first, shadow-second - the plank itself is what your eye hits right
@@ -398,7 +385,6 @@ main { display: block; padding: 2.5rem 0 5rem; }
   position: relative;
   width: var(--spine-w);
   height: var(--spine-h);
-  flex: 0 0 auto;
 }
 .book-spine:hover, .book-spine:focus-visible { text-decoration: none; outline: none; }
 
@@ -496,7 +482,7 @@ main { display: block; padding: 2.5rem 0 5rem; }
 .book-spine:hover .spine-caption, .book-spine:focus-visible .spine-caption { opacity: 1; }
 
 @media (max-width: 500px) {
-  .shelf { --spine-h: 116px; --spine-w: 22px; --spine-gap: 40px; }
+  .shelf { --spine-h: 140px; --spine-w: 26px; --spine-gap: 46px; }
 }
 
 /* Collapsible shelves */
