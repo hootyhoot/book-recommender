@@ -53,12 +53,11 @@
     <span class="section-count">{{ data.to_read|length }} books</span>
 </div>
 {% if data.to_read %}
-<div class="book-grid">
+<div class="shelf">
     {% for book in data.to_read %}
-    <a class="book-card" href="{{ book.url }}" target="_blank" rel="noopener noreferrer">
+    <a class="book-spine" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" title="{{ book.title }} &middot; {{ book.author }}">
         <div class="cover">{% if book.cover_url %}<img src="{{ book.cover_url }}" alt="{{ book.title }}" loading="lazy">{% endif %}</div>
-        <p class="book-title">{{ book.title }}</p>
-        <p class="book-author">{{ book.author }}</p>
+        <span class="spine-label">{{ book.title }}</span>
     </a>
     {% endfor %}
 </div>
@@ -71,20 +70,14 @@
     <span class="section-count">{{ data.read|length }} books</span>
 </div>
 {% if data.read %}
-<ul class="flight-log">
+<div class="shelf">
     {% for book in data.read %}
-    <li class="log-entry">
-        <a class="cover" href="{{ book.url }}" target="_blank" rel="noopener noreferrer">{% if book.cover_url %}<img src="{{ book.cover_url }}" alt="{{ book.title }}" loading="lazy">{% endif %}</a>
-        <div class="info">
-            <a class="book-title" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" style="display:block; text-decoration:none;">{{ book.title }}</a>
-            <p class="book-author">{{ book.author }}{% if book.page_count %} &middot; {{ book.page_count }}p{% endif %}</p>
-            <ul class="tag-list">
-                {% for t in book.genre_tags[:3] %}<li class="tag">{{ t }}</li>{% endfor %}
-            </ul>
-        </div>
-    </li>
+    <a class="book-spine" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" title="{{ book.title }} &middot; {{ book.author }}">
+        <div class="cover">{% if book.cover_url %}<img src="{{ book.cover_url }}" alt="{{ book.title }}" loading="lazy">{% endif %}</div>
+        <span class="spine-label">{{ book.title }}</span>
+    </a>
     {% endfor %}
-</ul>
+</div>
 {% else %}
     <p class="empty-state">Nothing marked as read yet.</p>
 {% endif %}

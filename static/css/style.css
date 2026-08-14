@@ -15,6 +15,10 @@
   --role-active: #4cd787;
   --role-highlight: #f2b84b;
 
+  --shelf-wood: #6b4d31;
+  --shelf-wood-edge: #8a6640;
+  --shelf-shadow: rgba(0, 0, 0, .45);
+
   --font-display: "Big Shoulders Display", sans-serif;
   --font-body: "IBM Plex Sans", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
@@ -35,6 +39,9 @@
   --role-data: #2e6e8e;
   --role-active: #3f7d4a;
   --role-highlight: #a6447a;
+  --shelf-wood: #8a6640;
+  --shelf-wood-edge: #a9824f;
+  --shelf-shadow: rgba(43, 36, 24, .35);
   color-scheme: light;
 }
 
@@ -49,6 +56,9 @@
     --role-data: #2e6e8e;
     --role-active: #3f7d4a;
     --role-highlight: #a6447a;
+    --shelf-wood: #8a6640;
+    --shelf-wood-edge: #a9824f;
+    --shelf-shadow: rgba(43, 36, 24, .35);
     color-scheme: light;
   }
 }
@@ -111,7 +121,7 @@ main { display: block; padding: 2.5rem 0 5rem; }
 .navbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 1rem;
   padding: .85rem 1.5rem;
   max-width: var(--max-width);
@@ -260,31 +270,70 @@ main { display: block; padding: 2.5rem 0 5rem; }
 
 .empty-state { color: var(--ink-muted); font-family: var(--font-mono); font-size: .85rem; }
 
-.book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1.25rem; }
+/* Bookshelf: covers stand in a row on a wooden ledge that repeats behind
+   every wrapped row. Each row's total content height is --spine-h plus the
+   caption block below it (--label-h, fixed so the math stays exact - a
+   caption that grew or shrank with its text would throw off every ledge
+   below it), and the ledge is drawn right at that boundary, repeating
+   every --spine-h + --label-h + --spine-gap down the shelf. */
+.shelf {
+  --spine-h: 150px;
+  --label-h: 22px;
+  --spine-gap: 30px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  column-gap: 1.1rem;
+  row-gap: var(--spine-gap);
+  padding-bottom: 14px;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--spine-h) + var(--label-h) + 4px),
+    var(--shelf-shadow) calc(var(--spine-h) + var(--label-h) + 4px),
+    var(--shelf-shadow) calc(var(--spine-h) + var(--label-h) + 8px),
+    var(--shelf-wood-edge) calc(var(--spine-h) + var(--label-h) + 8px),
+    var(--shelf-wood) calc(var(--spine-h) + var(--label-h) + 11px),
+    var(--shelf-wood) calc(var(--spine-h) + var(--label-h) + 20px),
+    transparent calc(var(--spine-h) + var(--label-h) + 20px),
+    transparent calc(var(--spine-h) + var(--label-h) + var(--spine-gap))
+  );
+  background-size: 100% calc(var(--spine-h) + var(--label-h) + var(--spine-gap));
+  background-repeat: repeat-y;
+}
 
-.book-card { display: flex; flex-direction: column; gap: .5rem; color: var(--ink); }
-.book-card .cover {
-  aspect-ratio: 2/3;
-  border-radius: var(--radius);
+.book-spine { display: flex; flex-direction: column; color: var(--ink); }
+.book-spine:hover { text-decoration: none; }
+.book-spine .cover {
+  height: var(--spine-h);
+  border-radius: 2px 2px 1px 1px;
   overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--border);
-  box-shadow: 0 2px 5px 0 rgba(0,0,0,.16), 0 2px 10px 0 rgba(0,0,0,.12);
+  box-shadow: 0 3px 6px 0 rgba(0,0,0,.22);
   transition: border-color .15s ease, transform .15s ease;
+  transform-origin: bottom center;
 }
-.book-card:hover { text-decoration: none; }
-.book-card:hover .cover { border-color: var(--role-data); transform: translateY(-2px); }
-.book-card .cover img { width: 100%; height: 100%; object-fit: cover; }
-.book-card .book-title { font-size: .88rem; font-weight: 600; line-height: 1.3; margin: 0; color: var(--ink); }
-.book-card .book-author { font-family: var(--font-mono); font-size: .74rem; color: var(--ink-muted); margin: 0; }
+.book-spine:hover .cover { border-color: var(--role-data); transform: translateY(-3px) scale(1.02); }
+.book-spine .cover img { width: 100%; height: 100%; object-fit: cover; }
+.book-spine .spine-label {
+  height: var(--label-h);
+  margin-top: 0;
+  padding-top: .45rem;
+  font-family: var(--font-mono);
+  font-size: .66rem;
+  line-height: 1;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  box-sizing: border-box;
+}
+.book-spine:hover .spine-label { color: var(--ink); }
 
-.flight-log { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
-.log-entry { display: flex; gap: 1rem; padding: .85rem 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
-.log-entry .cover { flex: 0 0 auto; width: 44px; aspect-ratio: 2/3; border-radius: 2px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); }
-.log-entry .cover img { width: 100%; height: 100%; object-fit: cover; }
-.log-entry .info { min-width: 0; flex: 1 1 auto; }
-.log-entry .book-title { font-weight: 600; font-size: .95rem; margin: 0 0 .15rem; color: var(--ink); }
-.log-entry .book-author { font-size: .85rem; color: var(--ink-muted); margin: 0 0 .4rem; }
+@media (max-width: 500px) {
+  .shelf { --spine-h: 118px; --spine-gap: 28px; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
+}
 
 /* -----------------------------------------------------------------------
    Recommender page
