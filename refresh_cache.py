@@ -32,6 +32,8 @@ def main():
         print(f'refresh failed: {e}', file=sys.stderr)
         sys.exit(1)
 
+    sg.annotate_spine_text_colors(data)
+
     payload = {
         'username': username,
         'fetched_at': int(time.time()),

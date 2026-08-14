@@ -61,7 +61,7 @@
         <a class="book-spine" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ book.title }} by {{ book.author }}">
             <span class="spine-body">
                 {% if book.cover_url %}<img src="{{ book.cover_url }}" alt="" loading="lazy">{% endif %}
-                <span class="spine-title">{{ book.title }}</span>
+                <span class="spine-title spine-title--{{ book.spine_text|default('light') }}">{{ book.title }}</span>
             </span>
             <span class="spine-caption"><strong>{{ book.title }}</strong>{{ book.author }}</span>
         </a>
@@ -85,7 +85,7 @@
         <a class="book-spine" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ book.title }} by {{ book.author }}">
             <span class="spine-body">
                 {% if book.cover_url %}<img src="{{ book.cover_url }}" alt="" loading="lazy">{% endif %}
-                <span class="spine-title">{{ book.title }}</span>
+                <span class="spine-title spine-title--{{ book.spine_text|default('light') }}">{{ book.title }}</span>
             </span>
             <span class="spine-caption"><strong>{{ book.title }}</strong>{{ book.author }}</span>
         </a>

@@ -289,7 +289,13 @@ main { display: block; padding: 2.5rem 0 5rem; }
   align-items: flex-end;
   column-gap: 2px;
   row-gap: var(--spine-gap);
-  padding: 0 0 14px;
+  /* Room for the hover pull-out (lifts ~10px) and the caption below the
+     last row - without this, the collapsible wrapper's overflow:hidden
+     (needed for the expand/collapse animation) clips both. Pattern is
+     anchored to content-box so this padding doesn't shift the ledge
+     lines out of alignment with the rows they sit under. */
+  padding: 20px 4px 48px;
+  background-origin: content-box;
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0,
@@ -356,15 +362,26 @@ main { display: block; padding: 2.5rem 0 5rem; }
   font-family: var(--font-mono);
   font-size: .6rem;
   letter-spacing: .02em;
-  color: #f2f2f0;
-  text-shadow: 0 1px 3px rgba(0,0,0,.85);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  background: linear-gradient(to bottom, rgba(0,0,0,.1), rgba(0,0,0,.5));
   transition: opacity .2s ease;
 }
 .book-spine:hover .spine-title, .book-spine:focus-visible .spine-title { opacity: 0; }
+
+/* Text color/scrim picked per-book from the actual sampled luminance of
+   the cover strip underneath (see spine_text_color in
+   storygraph_scraper.py), not a fixed color that fights busy covers. */
+.spine-title--light {
+  color: #f2f2f0;
+  text-shadow: 0 1px 3px rgba(0,0,0,.85);
+  background: linear-gradient(to bottom, rgba(0,0,0,.1), rgba(0,0,0,.5));
+}
+.spine-title--dark {
+  color: #1a1a1a;
+  text-shadow: 0 1px 2px rgba(255,255,255,.7);
+  background: linear-gradient(to bottom, rgba(255,255,255,.1), rgba(255,255,255,.5));
+}
 
 .spine-caption {
   position: absolute;

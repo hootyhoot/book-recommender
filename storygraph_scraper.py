@@ -10,6 +10,7 @@ This module only fetches and parses; it doesn't cache or schedule
 anything, that's handled by refresh_cache.py.
 """
 
+import io
 import os
 import re
 import time
@@ -17,6 +18,7 @@ import time
 from curl_cffi import requests
 from curl_cffi.requests.exceptions import RequestException
 from bs4 import BeautifulSoup
+from PIL import Image
 TARGETS = {
     "currently_reading": "currently-reading",
     "to_read": "to-read",
@@ -117,3 +119,32 @@ def fetch_all(username, max_pages=25):
         result[key] = fetch_list(target, username, max_pages=max_pages)
         time.sleep(2)  # space out requests to different endpoints, not just retries
     return result
+
+
+def _relative_luminance(rgb):
+    r, g, b = (c / 255 for c in rgb)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def spine_text_color(cover_url):
+    """'dark' or 'light' - whichever reads clearly over the strip of the
+    cover that's actually visible on the spine (its left edge), sampled
+    from the real image rather than guessed from genre/palette."""
+    try:
+        resp = requests.get(cover_url, impersonate="chrome", timeout=10)
+        img = Image.open(io.BytesIO(resp.content)).convert("RGB")
+        w, h = img.size
+        strip = img.crop((0, 0, max(1, w // 4), h)).resize((6, 6))
+        avg = tuple(sum(c) / len(c) for c in zip(*strip.getdata()))
+        return "dark" if _relative_luminance(avg) > 0.55 else "light"
+    except Exception:
+        return "light"
+
+
+def annotate_spine_text_colors(data):
+    """Adds a spine_text ('dark'/'light') field to every book across all
+    three lists in a fetch_all()-shaped dict, in place."""
+    for books in data.values():
+        for book in books:
+            book["spine_text"] = spine_text_color(book["cover_url"]) if book.get("cover_url") else "light"
+    return data
