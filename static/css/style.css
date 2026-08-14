@@ -69,12 +69,9 @@
 
 * , *::before, *::after { box-sizing: border-box; }
 
-/* The shelf pull-outs intentionally bleed outside their own narrow box
-   (see .shelf-wrap-inner's clip-path below) - that's meant to stay
-   inside the viewport, but a stray sticky-hover state on mobile (tapping
-   a link can leave :hover applied until you tap elsewhere) could still
-   register as real scrollable width without this, letting the page
-   pan/zoom sideways. */
+/* A stray sticky-hover state on mobile (tapping a link can leave :hover
+   applied until you tap elsewhere) could register as real scrollable
+   width without this, letting the page pan/zoom sideways. */
 html { overflow-x: hidden; }
 
 body {
@@ -261,7 +258,7 @@ main { display: block; padding: 2.5rem 0 5rem; }
 .hero-stat-value { font-family: var(--font-display); font-size: 1.8rem; font-weight: 800; color: var(--role-active); line-height: 1; }
 .hero-stat-label { font-family: var(--font-mono); font-size: .68rem; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .08em; }
 
-.section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin: 2.5rem 0 1rem; }
+.section-heading { display: flex; align-items: baseline; justify-content: center; gap: 1rem; margin: 2.5rem 0 1rem; }
 .section-heading:first-of-type { margin-top: 0; }
 .section-heading h2 { margin: 0; }
 .section-count { font-family: var(--font-mono); font-size: .78rem; color: var(--ink-muted); white-space: nowrap; }
@@ -516,9 +513,7 @@ main { display: block; padding: 2.5rem 0 5rem; }
 .section-toggle {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  width: 100%;
+  gap: .6rem;
   background: none;
   border: none;
   padding: 0;
@@ -526,7 +521,7 @@ main { display: block; padding: 2.5rem 0 5rem; }
   font: inherit;
   color: inherit;
   cursor: pointer;
-  text-align: left;
+  text-align: center;
 }
 .section-toggle:hover h2 { color: var(--role-data); }
 .section-toggle .heading-left { display: flex; align-items: baseline; gap: .6rem; }
@@ -539,12 +534,16 @@ main { display: block; padding: 2.5rem 0 5rem; }
   transition: grid-template-rows .4s cubic-bezier(.4,0,.2,1);
 }
 .shelf-wrap[data-open="true"] { grid-template-rows: 1fr; }
-/* Clips vertically only (needed so the collapse animation actually hides
-   content) while leaving horizontal space open - overflow:hidden would
-   also cut off hover pull-outs on the leftmost/rightmost spines in a
-   row. flow-root keeps the shelf's own margin-top (its top pop-out room)
-   from collapsing through and throwing off this box's height. */
-.shelf-wrap-inner { display: flow-root; clip-path: inset(0 -100vw 0 -100vw); min-height: 0; }
+/* overflow:hidden (not clip-path) is required here for two reasons: it's
+   what actually hides the collapsed content, and - less obviously - it's
+   also what lets min-height:0 take effect at all. A CSS grid item's
+   automatic minimum size normally floors it at its content's natural
+   height regardless of the 0fr track size, and that floor is only
+   suppressed when the item's overflow is something other than visible.
+   clip-path doesn't count for that, so the "the pile" section, while
+   collapsed, was still reserving its full expanded height below the
+   fold even though nothing was visible there. */
+.shelf-wrap-inner { overflow: hidden; min-height: 0; }
 
 /* -----------------------------------------------------------------------
    Recommender page

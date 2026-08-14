@@ -11,6 +11,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from fuzzywuzzy import process
 import os
 import json
+from datetime import datetime
 from dotenv import load_dotenv
 
 app = Flask(__name__)
@@ -181,6 +182,11 @@ def load_storygraph_cache():
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         return None
+
+
+@app.template_global()
+def current_year():
+    return datetime.now().year
 
 
 @app.template_global()
