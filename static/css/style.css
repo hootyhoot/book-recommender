@@ -289,7 +289,11 @@ main { display: block; padding: 2.5rem 0 5rem; }
   column-gap: var(--fav-gap);
   row-gap: var(--fav-gap);
   margin-top: 4px;
-  padding: 0 14px;
+  /* Bottom padding reserves room for the ledge band itself - background
+     is clipped to this box's own height, so without it the wood/shadow
+     stops (which start right at the row's bottom edge) render entirely
+     outside the box and never show up at all. */
+  padding: 0 14px 20px;
   background-origin: content-box;
   background-image: repeating-linear-gradient(
     to bottom,
@@ -314,6 +318,7 @@ main { display: block; padding: 2.5rem 0 5rem; }
 }
 .favorite-book:hover { text-decoration: none; }
 .favorite-book .cover {
+  display: block;
   height: var(--fav-h);
   border-radius: 2px;
   overflow: hidden;
