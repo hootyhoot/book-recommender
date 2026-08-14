@@ -270,6 +270,81 @@ main { display: block; padding: 2.5rem 0 5rem; }
 
 .empty-state { color: var(--ink-muted); font-family: var(--font-mono); font-size: .85rem; }
 
+/* Favorites: unlike the spine shelves below, these always show the full
+   front cover (no spine crop, no hover reveal) with noticeably wider
+   gaps between books - closer to how StoryGraph's own favorites row
+   reads, a small showcased set rather than a packed shelf. Still sits
+   on the same wood ledge for visual consistency with the rest of the
+   page, but the ledge is thin and sits right under the covers only, so
+   the caption below each book always has a plain background. */
+.favorites-shelf {
+  --fav-h: 168px;
+  --fav-cap-h: 42px;
+  --fav-gap: 30px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  column-gap: var(--fav-gap);
+  row-gap: var(--fav-gap);
+  margin-top: 4px;
+  padding: 0 14px;
+  background-origin: content-box;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent var(--fav-h),
+    var(--shelf-wood-edge) var(--fav-h),
+    var(--shelf-wood) calc(var(--fav-h) + 3px),
+    var(--shelf-wood) calc(var(--fav-h) + 12px),
+    var(--shelf-shadow) calc(var(--fav-h) + 12px),
+    var(--shelf-shadow) calc(var(--fav-h) + 16px),
+    transparent calc(var(--fav-h) + 16px),
+    transparent calc(var(--fav-h) + var(--fav-cap-h) + var(--fav-gap))
+  );
+  background-size: 100% calc(var(--fav-h) + var(--fav-cap-h) + var(--fav-gap));
+  background-repeat: repeat-y;
+}
+
+.favorite-book {
+  display: flex;
+  flex-direction: column;
+  width: calc(var(--fav-h) * var(--ratio, .667));
+  color: var(--ink);
+}
+.favorite-book:hover { text-decoration: none; }
+.favorite-book .cover {
+  height: var(--fav-h);
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 8px 18px -8px rgba(0,0,0,.5);
+  transition: transform .18s ease, border-color .18s ease;
+}
+.favorite-book:hover .cover { transform: translateY(-3px); border-color: var(--role-highlight); }
+.favorite-book .cover img { width: 100%; height: 100%; object-fit: cover; }
+.favorite-book .cap {
+  height: var(--fav-cap-h);
+  padding-top: .4rem;
+  font-family: var(--font-mono);
+  font-size: .68rem;
+  line-height: 1.3;
+  color: var(--ink-muted);
+  overflow: hidden;
+}
+.favorite-book .cap strong,
+.favorite-book .cap .author {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.favorite-book .cap strong { color: var(--ink); font-weight: 600; }
+
+@media (max-width: 500px) {
+  .favorites-shelf { --fav-h: 128px; --fav-gap: 20px; }
+}
+
 /* Bookshelf: real spines (a genuine narrow slice of each book's own cover
    art, via object-fit:cover in an overflow:hidden box, with the title set
    vertically over it like real spine typography) stand packed edge to edge
@@ -291,20 +366,28 @@ main { display: block; padding: 2.5rem 0 5rem; }
   /* Bottom padding is room for the last row's hover pull-out + caption;
      top room comes from the wrapper's margin below, not padding here,
      since padding would sit inside this box's own background-painted
-     area and the repeating ledge pattern would bleed upward into it. */
-  padding: 0 0 48px;
+     area and the repeating ledge pattern would bleed upward into it.
+     Left/right padding makes the ledge overhang the books slightly on
+     both ends, like a real plank longer than what's sitting on it -
+     without it the left edge sat flush with zero overshoot while a
+     partially-filled last row already overshot on the right. */
+  padding: 0 14px 48px;
   margin-top: 22px;
+  /* Ledge sits flush against the book bottoms (no gap) and reads wood-
+     first, shadow-second - the plank itself is what your eye hits right
+     under the books, and its underside casts a shadow into the space
+     below it, not the other way around. */
   background-origin: content-box;
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0,
-    transparent calc(var(--spine-h) + 4px),
-    var(--shelf-shadow) calc(var(--spine-h) + 4px),
-    var(--shelf-shadow) calc(var(--spine-h) + 8px),
-    var(--shelf-wood-edge) calc(var(--spine-h) + 8px),
-    var(--shelf-wood) calc(var(--spine-h) + 11px),
-    var(--shelf-wood) calc(var(--spine-h) + 20px),
-    transparent calc(var(--spine-h) + 20px),
+    transparent var(--spine-h),
+    var(--shelf-wood-edge) var(--spine-h),
+    var(--shelf-wood) calc(var(--spine-h) + 3px),
+    var(--shelf-wood) calc(var(--spine-h) + 12px),
+    var(--shelf-shadow) calc(var(--spine-h) + 12px),
+    var(--shelf-shadow) calc(var(--spine-h) + 16px),
+    transparent calc(var(--spine-h) + 16px),
     transparent calc(var(--spine-h) + var(--spine-gap))
   );
   background-size: 100% calc(var(--spine-h) + var(--spine-gap));

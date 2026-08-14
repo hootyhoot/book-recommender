@@ -23,6 +23,7 @@ TARGETS = {
     "currently_reading": "currently-reading",
     "to_read": "to-read",
     "read": "books-read",
+    "favorites": "favorites",
 }
 
 

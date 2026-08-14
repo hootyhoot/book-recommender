@@ -26,6 +26,22 @@
 {% else %}
 
 <div class="section-heading">
+    <h2>favorites</h2>
+</div>
+{% if data.favorites %}
+<div class="favorites-shelf">
+    {% for book in data.favorites %}
+    <a class="favorite-book" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" style="--ratio: {{ book.cover_ratio|default(0.667) }};">
+        <span class="cover">{% if book.cover_url %}<img src="{{ book.cover_url }}" alt="{{ book.title }}" loading="eager">{% endif %}</span>
+        <span class="cap"><strong>{{ book.title }}</strong><span class="author">{{ book.author }}</span></span>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+    <p class="empty-state">No favorites marked yet.</p>
+{% endif %}
+
+<div class="section-heading">
     <h2>currently reading</h2>
 </div>
 {% if data.currently_reading %}
