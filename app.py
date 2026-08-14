@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, url_for, send_from_directory
+from flask import Flask, render_template, request, jsonify, url_for
 import pandas as pd
 import numpy as np
 import nltk
@@ -202,18 +202,6 @@ def showcase():
 @app.route('/recommender')
 def recommender():
     return render_template('recommend.html')
-
-@app.route('/favicon.ico')
-def favicon():
-    return send_from_directory(app.static_folder, 'favicon.ico')
-
-@app.route('/apple-touch-icon.png')
-def apple_touch_icon():
-    return send_from_directory(app.static_folder, 'apple-touch-icon.png')
-
-@app.route('/apple-touch-icon-precomposed.png')
-def apple_touch_icon_precomposed():
-    return send_from_directory(app.static_folder, 'apple-touch-icon-precomposed.png')
 
 @app.route('/recommend', methods=['POST'])
 def recommend():
