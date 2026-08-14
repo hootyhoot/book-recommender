@@ -11,6 +11,7 @@ anything, that's handled by refresh_cache.py.
 """
 
 import io
+import json
 import os
 import re
 import time
@@ -19,6 +20,11 @@ from curl_cffi import requests
 from curl_cffi.requests.exceptions import RequestException
 from bs4 import BeautifulSoup
 from PIL import Image
+
+_MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+COVERS_DIR = os.path.join(_MODULE_DIR, "static", "covers")
+_COVER_META_CACHE_PATH = os.path.join(COVERS_DIR, "meta.json")
+
 TARGETS = {
     "currently_reading": "currently-reading",
     "to_read": "to-read",
@@ -127,13 +133,32 @@ def _relative_luminance(rgb):
     return 0.2126 * r + 0.7152 * g + 0.0722 * b
 
 
-def _cover_meta(cover_url):
-    """(spine_text, cover_ratio) sampled directly from the real image:
-    spine_text is 'dark' or 'light', whichever reads clearly over the
-    strip of the cover actually visible on the spine (its left edge);
-    cover_ratio is width/height, used so the hover pull-out can size
-    itself to the book's real proportions instead of cropping tall or
-    wide covers to an assumed 2:3."""
+def _load_cover_meta_cache():
+    try:
+        with open(_COVER_META_CACHE_PATH) as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def _save_cover_meta_cache(cache):
+    os.makedirs(COVERS_DIR, exist_ok=True)
+    tmp_path = _COVER_META_CACHE_PATH + ".tmp"
+    with open(tmp_path, "w") as f:
+        json.dump(cache, f, indent=2)
+    os.replace(tmp_path, _COVER_META_CACHE_PATH)
+
+
+def _fetch_cover_meta(cover_url, book_id):
+    """(spine_text, cover_ratio, cover_local) sampled directly from the
+    real image: spine_text is 'dark' or 'light', whichever reads clearly
+    over the strip of the cover actually visible on the spine (its left
+    edge); cover_ratio is width/height, used so the hover pull-out can
+    size itself to the book's real proportions instead of cropping tall
+    or wide covers to an assumed 2:3. Also saves a local WebP copy so the
+    page serves covers from itself instead of hot-linking StoryGraph's
+    CDN on every visitor's browser - cover_local is the static/-relative
+    path to that copy, or None if the save failed."""
     try:
         resp = requests.get(cover_url, impersonate="chrome", timeout=10)
         img = Image.open(io.BytesIO(resp.content)).convert("RGB")
@@ -141,18 +166,55 @@ def _cover_meta(cover_url):
         strip = img.crop((0, 0, max(1, w // 4), h)).resize((6, 6))
         avg = tuple(sum(c) / len(c) for c in zip(*strip.getdata()))
         text_color = "dark" if _relative_luminance(avg) > 0.55 else "light"
-        return text_color, round(w / h, 4)
+        ratio = round(w / h, 4)
+
+        cover_local = None
+        if book_id:
+            os.makedirs(COVERS_DIR, exist_ok=True)
+            dest = os.path.join(COVERS_DIR, f"{book_id}.webp")
+            img.save(dest, "WEBP", quality=92, method=6)
+            cover_local = f"covers/{book_id}.webp"
+
+        return text_color, ratio, cover_local
     except Exception:
-        return "light", 0.667
+        return "light", 0.667, None
 
 
 def annotate_cover_meta(data):
-    """Adds spine_text and cover_ratio (see _cover_meta) to every book
-    across all three lists in a fetch_all()-shaped dict, in place."""
+    """Adds spine_text, cover_ratio, and cover_local (see
+    _fetch_cover_meta) to every book across all lists in a fetch_all()-
+    shaped dict, in place. Books already seen in a previous run are read
+    straight from the on-disk meta cache with no network fetch at all -
+    only genuinely new book ids get downloaded and converted, so a daily
+    refresh stays fast and StoryGraph/its CDN only ever sees a request
+    for a cover exactly once, ever."""
+    cache = _load_cover_meta_cache()
+    cache_changed = False
+
     for books in data.values():
         for book in books:
+            book_id = book.get("id")
+            cached = cache.get(book_id) if book_id else None
+            if cached:
+                book["spine_text"] = cached["spine_text"]
+                book["cover_ratio"] = cached["cover_ratio"]
+                if cached.get("cover_local"):
+                    book["cover_local"] = cached["cover_local"]
+                continue
+
             if book.get("cover_url"):
-                book["spine_text"], book["cover_ratio"] = _cover_meta(book["cover_url"])
+                text_color, ratio, cover_local = _fetch_cover_meta(book["cover_url"], book_id)
             else:
-                book["spine_text"], book["cover_ratio"] = "light", 0.667
+                text_color, ratio, cover_local = "light", 0.667, None
+
+            book["spine_text"], book["cover_ratio"] = text_color, ratio
+            if cover_local:
+                book["cover_local"] = cover_local
+
+            if book_id:
+                cache[book_id] = {"spine_text": text_color, "cover_ratio": ratio, "cover_local": cover_local}
+                cache_changed = True
+
+    if cache_changed:
+        _save_cover_meta_cache(cache)
     return data

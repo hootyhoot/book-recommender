@@ -183,6 +183,16 @@ def load_storygraph_cache():
         return None
 
 
+@app.template_global()
+def cover_src(book):
+    """Local WebP copy if refresh_cache.py has converted one, otherwise
+    the original StoryGraph CDN URL as a fallback (e.g. before the first
+    refresh has run for a brand-new book)."""
+    if book.get('cover_local'):
+        return url_for('static', filename=book['cover_local'])
+    return book.get('cover_url')
+
+
 @app.route('/')
 def showcase():
     cache = load_storygraph_cache()

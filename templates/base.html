@@ -9,6 +9,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://app.thestorygraph.com">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap">
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -19,6 +20,21 @@
             var theme = stored || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
             document.documentElement.setAttribute('data-theme', theme);
         })();
+    </script>
+
+    <!-- McMaster-Carr-style instant navigation: same-origin links get
+         prerendered on hover/pointerdown in browsers that support the
+         Speculation Rules API, so clicking "shelf"/"recommender" feels
+         instant instead of waiting for a fresh request. Same-origin only
+         (no StoryGraph links) - "eagerness: moderate" fires on hover
+         intent, not on every link just entering the viewport. -->
+    <script type="speculationrules">
+    {
+        "prerender": [{
+            "where": { "href_matches": "/*" },
+            "eagerness": "moderate"
+        }]
+    }
     </script>
 </head>
 <body>
@@ -50,6 +66,7 @@
     </footer>
 
     <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/prefetch-nav.js') }}" defer></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>
