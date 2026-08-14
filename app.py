@@ -10,6 +10,7 @@ import requests
 from sklearn.metrics.pairwise import cosine_similarity
 from fuzzywuzzy import process
 import os
+import json
 from dotenv import load_dotenv
 
 app = Flask(__name__)
@@ -171,9 +172,26 @@ def get_recommendations_by_title(book_title):
     except Exception as e:
         raise Exception(f"Error processing title search: {str(e)}")
 
+STORYGRAPH_CACHE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'storygraph_cache.json')
+
+
+def load_storygraph_cache():
+    try:
+        with open(STORYGRAPH_CACHE_PATH) as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+
 @app.route('/')
-def index():
-    return render_template('index.html')
+def showcase():
+    cache = load_storygraph_cache()
+    return render_template('showcase.html', data=cache)
+
+
+@app.route('/recommender')
+def recommender():
+    return render_template('recommend.html')
 
 @app.route('/favicon.ico')
 def favicon():

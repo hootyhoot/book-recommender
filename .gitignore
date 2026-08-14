@@ -5,3 +5,7 @@
 /.zed
 /pyrightconfig.json
 /nltk_data
+
+/storygraph_cache.json
+__pycache__/
+*.pyc

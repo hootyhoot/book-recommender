@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}bookshelf | mikhail.codes{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <p class="eyebrow">reading log</p>
+    <h1>What I'm Reading</h1>
+    {% if data %}
+    <div class="hero-stats">
+        <div class="hero-stat">
+            <span class="hero-stat-value">{{ data.read|length }}</span>
+            <span class="hero-stat-label">books read</span>
+        </div>
+        <div class="hero-stat">
+            <span class="hero-stat-value">{{ data.to_read|length }}</span>
+            <span class="hero-stat-label">on the pile</span>
+        </div>
+        <div class="hero-stat">
+            <span class="hero-stat-value">{{ data.currently_reading|length }}</span>
+            <span class="hero-stat-label">reading now</span>
+        </div>
+    </div>
+    {% endif %}
+</section>
+
+{% if not data %}
+<p class="empty-state">Shelf data hasn't been fetched yet.</p>
+{% else %}
+
+<div class="section-heading">
+    <h2>currently reading</h2>
+</div>
+{% if data.currently_reading %}
+    {% for book in data.currently_reading %}
+    <a class="currently-reading-panel" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:flex;">
+        <div class="cover">{% if book.cover_url %}<img src="{{ book.cover_url }}" alt="{{ book.title }}" loading="eager">{% endif %}</div>
+        <div class="info">
+            <p class="book-title">{{ book.title }}</p>
+            <p class="book-author">{{ book.author }}</p>
+            <ul class="tag-list">
+                {% for t in book.genre_tags %}<li class="tag">{{ t }}</li>{% endfor %}
+                {% for t in book.mood_tags %}<li class="tag tag--mood">{{ t }}</li>{% endfor %}
+            </ul>
+        </div>
+    </a>
+    {% endfor %}
+{% else %}
+    <p class="empty-state">Nothing on the go right now.</p>
+{% endif %}
+
+<div class="section-heading">
+    <h2>the pile</h2>
+    <span class="section-count">{{ data.to_read|length }} books</span>
+</div>
+{% if data.to_read %}
+<div class="book-grid">
+    {% for book in data.to_read %}
+    <a class="book-card" href="{{ book.url }}" target="_blank" rel="noopener noreferrer">
+        <div class="cover">{% if book.cover_url %}<img src="{{ book.cover_url }}" alt="{{ book.title }}" loading="lazy">{% endif %}</div>
+        <p class="book-title">{{ book.title }}</p>
+        <p class="book-author">{{ book.author }}</p>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+    <p class="empty-state">Nothing queued up.</p>
+{% endif %}
+
+<div class="section-heading">
+    <h2>read</h2>
+    <span class="section-count">{{ data.read|length }} books</span>
+</div>
+{% if data.read %}
+<ul class="flight-log">
+    {% for book in data.read %}
+    <li class="log-entry">
+        <a class="cover" href="{{ book.url }}" target="_blank" rel="noopener noreferrer">{% if book.cover_url %}<img src="{{ book.cover_url }}" alt="{{ book.title }}" loading="lazy">{% endif %}</a>
+        <div class="info">
+            <a class="book-title" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" style="display:block; text-decoration:none;">{{ book.title }}</a>
+            <p class="book-author">{{ book.author }}{% if book.page_count %} &middot; {{ book.page_count }}p{% endif %}</p>
+            <ul class="tag-list">
+                {% for t in book.genre_tags[:3] %}<li class="tag">{{ t }}</li>{% endfor %}
+            </ul>
+        </div>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+    <p class="empty-state">Nothing marked as read yet.</p>
+{% endif %}
+
+{% endif %}
+{% endblock %}

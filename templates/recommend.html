@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}recommender | mikhail.codes{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <p class="eyebrow">book recommender</p>
+    <h1>Find Your Next Book</h1>
+    <p style="color:var(--ink-muted); max-width:60ch;">Search by a title you already like, or describe what you're in the mood for &mdash; matched against a library of 10,000 books using text embeddings.</p>
+</section>
+
+<div class="panel">
+    <form id="query-form">
+        <select id="search-type" name="search_type">
+            <option value="description">Recommend by description</option>
+            <option value="title">Recommend by title</option>
+        </select>
+        <input type="text" id="query" name="query" placeholder="Enter a book title or description" required>
+        <button type="submit" id="submit-btn">Get recommendations</button>
+    </form>
+
+    <div class="help-toggle">
+        <button class="btn" id="help-btn" type="button">how do i use this?</button>
+        <div class="help-text" id="help-text">
+            <p>To get the best recommendations:</p>
+            <ul>
+                <li>Include specific genres or settings (e.g. "historical fiction set in ancient Rome")</li>
+                <li>Describe the type of book you're after (e.g. "science fiction with time travel")</li>
+                <li>Mention themes or elements you enjoy (e.g. "mystery with a strong female lead")</li>
+                <li>Or the mood you're after (e.g. "cozy mystery with humor")</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="loading">searching&hellip;</div>
+
+    <div id="potential-matches"></div>
+
+    <div id="sort-options">
+        <select id="sort-select">
+            <option value="default">Sort by: relevance</option>
+            <option value="author">Sort by: author name</option>
+            <option value="rating">Sort by: average rating</option>
+        </select>
+    </div>
+
+    <div id="recommendations"></div>
+    <button class="btn" id="show-more" type="button">show more</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    let originalRecommendations = [];
+    let allRecommendations = [];
+    let currentlyDisplayed = 0;
+    const perPage = 5;
+
+    const form = document.getElementById('query-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const loading = document.getElementById('loading');
+    const recsEl = document.getElementById('recommendations');
+    const matchesEl = document.getElementById('potential-matches');
+    const sortOptions = document.getElementById('sort-options');
+    const sortSelect = document.getElementById('sort-select');
+    const showMoreBtn = document.getElementById('show-more');
+    const helpBtn = document.getElementById('help-btn');
+    const helpText = document.getElementById('help-text');
+    const searchType = document.getElementById('search-type');
+    const queryInput = document.getElementById('query');
+
+    function bookCard(book) {
+        const div = document.createElement('div');
+        div.className = 'book-result';
+        div.innerHTML =
+            '<h3>' + book.Book + '</h3>' +
+            '<p class="book-author">' + book.Author + '</p>' +
+            '<p>Average rating: ' + book.Avg_Rating + '/5.00</p>' +
+            '<p><a href="' + book.URL + '" target="_blank" rel="noopener noreferrer">more info &rarr;</a></p>';
+        return div;
+    }
+
+    function renderRecommendations(start, end) {
+        for (let i = start; i < end && i < allRecommendations.length; i++) {
+            recsEl.appendChild(bookCard(allRecommendations[i]));
+        }
+        currentlyDisplayed = end;
+        recsEl.style.display = 'block';
+        sortOptions.style.display = 'block';
+        showMoreBtn.style.display = currentlyDisplayed >= allRecommendations.length ? 'none' : 'block';
+    }
+
+    function sortRecommendations(sortBy) {
+        if (sortBy === 'author') {
+            allRecommendations.sort((a, b) => a.Author.localeCompare(b.Author));
+        } else if (sortBy === 'rating') {
+            allRecommendations.sort((a, b) => b.Avg_Rating - a.Avg_Rating);
+        } else {
+            allRecommendations = originalRecommendations.map((item) => ({ ...item }));
+        }
+        recsEl.innerHTML = '';
+        renderRecommendations(0, perPage);
+    }
+
+    sortSelect.addEventListener('change', function () {
+        sortRecommendations(this.value);
+    });
+
+    searchType.addEventListener('change', function () {
+        queryInput.value = '';
+    });
+
+    function runSearch(type, query) {
+        submitBtn.disabled = true;
+        loading.style.display = 'block';
+        recsEl.style.display = 'none';
+        matchesEl.style.display = 'none';
+        sortOptions.style.display = 'none';
+        showMoreBtn.style.display = 'none';
+        recsEl.innerHTML = '';
+        matchesEl.innerHTML = '';
+
+        const body = new URLSearchParams({ search_type: type, query: query });
+
+        fetch('/recommend', { method: 'POST', body: body })
+            .then((res) => res.json().then((data) => ({ ok: res.ok, data: data })))
+            .then(({ ok, data }) => {
+                if (!ok || data.error) {
+                    alert(data.error || 'An unexpected error occurred. Please try again.');
+                    return;
+                }
+                if (data.length > 0 && 'similarity' in data[0]) {
+                    const heading = document.createElement('p');
+                    heading.textContent = "Couldn't find an exact match, which of these is closest?";
+                    matchesEl.appendChild(heading);
+                    data.forEach((match) => {
+                        const div = document.createElement('div');
+                        div.className = 'potential-match';
+                        div.dataset.title = match.Book;
+                        div.innerHTML =
+                            '<h3>' + match.Book + '</h3>' +
+                            '<p class="book-author">' + match.Author + '</p>' +
+                            '<p>Similarity: ' + match.similarity + '%</p>';
+                        matchesEl.appendChild(div);
+                    });
+                    matchesEl.style.display = 'block';
+                } else {
+                    originalRecommendations = data.map((item) => ({ ...item }));
+                    allRecommendations = data.map((item) => ({ ...item }));
+                    sortSelect.value = 'default';
+                    renderRecommendations(0, perPage);
+                }
+            })
+            .catch((err) => {
+                console.error(err);
+                alert('An unexpected error occurred. Please try again.');
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                loading.style.display = 'none';
+            });
+    }
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        runSearch(searchType.value, queryInput.value);
+    });
+
+    matchesEl.addEventListener('click', function (e) {
+        const match = e.target.closest('.potential-match');
+        if (!match) return;
+        queryInput.value = match.dataset.title;
+        searchType.value = 'title';
+        runSearch('title', match.dataset.title);
+    });
+
+    showMoreBtn.addEventListener('click', function () {
+        renderRecommendations(currentlyDisplayed, currentlyDisplayed + perPage);
+    });
+
+    helpBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        helpText.classList.toggle('open');
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('#help-text') && !e.target.closest('#help-btn')) {
+            helpText.classList.remove('open');
+        }
+    });
+})();
+</script>
+{% endblock %}
