@@ -33,6 +33,7 @@
     {% for book in data.favorites %}
     <a class="favorite-book" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ book.title }} by {{ book.author }}" style="--ratio: {{ book.cover_ratio|default(0.667) }};">
         <span class="cover">{% if book.cover_url %}<img src="{{ book.cover_url }}" alt="{{ book.title }}" loading="eager">{% endif %}</span>
+        <span class="spine-caption"><strong>{{ book.title }}</strong>{{ book.author }}</span>
     </a>
     {% endfor %}
 </div>

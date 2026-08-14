@@ -312,11 +312,13 @@ main { display: block; padding: 2.5rem 0 5rem; }
 }
 
 .favorite-book {
+  position: relative;
   display: block;
   width: calc(var(--fav-h) * var(--ratio, .667));
   color: var(--ink);
 }
 .favorite-book:hover { text-decoration: none; }
+.favorite-book .spine-caption { width: calc(var(--fav-h) * var(--ratio, .667)); }
 .favorite-book .cover {
   display: block;
   height: var(--fav-h);
@@ -481,10 +483,14 @@ main { display: block; padding: 2.5rem 0 5rem; }
   opacity: 0;
   pointer-events: none;
   transition: opacity .18s ease .08s;
-  z-index: 31;
+  /* High enough to stay above every other section on the page, not just
+     its own row - it's positioned outside .favorite-book's own box once
+     it pops out, and shouldn't get buried under later content. */
+  z-index: 999;
 }
 .spine-caption strong { display: block; color: var(--ink); font-weight: 600; }
-.book-spine:hover .spine-caption, .book-spine:focus-visible .spine-caption { opacity: 1; }
+.book-spine:hover .spine-caption, .book-spine:focus-visible .spine-caption,
+.favorite-book:hover .spine-caption, .favorite-book:focus-visible .spine-caption { opacity: 1; }
 
 @media (max-width: 500px) {
   .shelf { --spine-h: 140px; --spine-w: 26px; --spine-gap: 46px; }
