@@ -49,38 +49,56 @@
 {% endif %}
 
 <div class="section-heading">
-    <h2>the pile</h2>
-    <span class="section-count">{{ data.to_read|length }} books</span>
-</div>
-{% if data.to_read %}
-<div class="shelf">
-    {% for book in data.to_read %}
-    <a class="book-spine" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" title="{{ book.title }} &middot; {{ book.author }}">
-        <div class="cover">{% if book.cover_url %}<img src="{{ book.cover_url }}" alt="{{ book.title }}" loading="lazy">{% endif %}</div>
-        <span class="spine-label">{{ book.title }}</span>
-    </a>
-    {% endfor %}
-</div>
-{% else %}
-    <p class="empty-state">Nothing queued up.</p>
-{% endif %}
-
-<div class="section-heading">
-    <h2>read</h2>
-    <span class="section-count">{{ data.read|length }} books</span>
+    <button class="section-toggle" id="toggle-read" aria-expanded="true" aria-controls="shelf-read">
+        <span class="heading-left"><h2>read</h2><span class="section-count">{{ data.read|length }} books</span></span>
+        <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    </button>
 </div>
 {% if data.read %}
-<div class="shelf">
-    {% for book in data.read %}
-    <a class="book-spine" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" title="{{ book.title }} &middot; {{ book.author }}">
-        <div class="cover">{% if book.cover_url %}<img src="{{ book.cover_url }}" alt="{{ book.title }}" loading="lazy">{% endif %}</div>
-        <span class="spine-label">{{ book.title }}</span>
-    </a>
-    {% endfor %}
+<div class="shelf-wrap" id="shelf-read" data-open="true">
+    <div class="shelf-wrap-inner"><div class="shelf">
+        {% for book in data.read %}
+        <a class="book-spine" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ book.title }} by {{ book.author }}">
+            <span class="spine-body">
+                {% if book.cover_url %}<img src="{{ book.cover_url }}" alt="" loading="lazy">{% endif %}
+                <span class="spine-title">{{ book.title }}</span>
+            </span>
+            <span class="spine-caption"><strong>{{ book.title }}</strong>{{ book.author }}</span>
+        </a>
+        {% endfor %}
+    </div></div>
 </div>
 {% else %}
     <p class="empty-state">Nothing marked as read yet.</p>
 {% endif %}
 
+<div class="section-heading">
+    <button class="section-toggle" id="toggle-pile" aria-expanded="false" aria-controls="shelf-pile">
+        <span class="heading-left"><h2>the pile</h2><span class="section-count">{{ data.to_read|length }} books</span></span>
+        <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    </button>
+</div>
+{% if data.to_read %}
+<div class="shelf-wrap" id="shelf-pile" data-open="false">
+    <div class="shelf-wrap-inner"><div class="shelf">
+        {% for book in data.to_read %}
+        <a class="book-spine" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ book.title }} by {{ book.author }}">
+            <span class="spine-body">
+                {% if book.cover_url %}<img src="{{ book.cover_url }}" alt="" loading="lazy">{% endif %}
+                <span class="spine-title">{{ book.title }}</span>
+            </span>
+            <span class="spine-caption"><strong>{{ book.title }}</strong>{{ book.author }}</span>
+        </a>
+        {% endfor %}
+    </div></div>
+</div>
+{% else %}
+    <p class="empty-state">Nothing queued up.</p>
 {% endif %}
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/shelves.js') }}" defer></script>
 {% endblock %}
