@@ -1,10 +1,10 @@
 """Scrapes book lists from a public StoryGraph profile.
 
 No headless browser needed - StoryGraph's list pages are plain
-server-rendered HTML, so a normal HTTP request plus a session cookie is
-enough. The Cloudflare challenge that guards these pages occasionally
-triggers on a fresh request but reliably clears on a short retry, so each
-fetch retries a few times before giving up.
+server-rendered HTML, so a request plus a session cookie is enough,
+as long as the TLS fingerprint looks like a real browser (Cloudflare
+serves a JS challenge that plain `requests` can never pass otherwise,
+since it doesn't run JS - curl_cffi's browser impersonation clears it).
 
 This module only fetches and parses; it doesn't cache or schedule
 anything, that's handled by refresh_cache.py.
@@ -14,10 +14,9 @@ import os
 import re
 import time
 
-import requests
+from curl_cffi import requests
+from curl_cffi.requests.exceptions import RequestException
 from bs4 import BeautifulSoup
-
-USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36"
 TARGETS = {
     "currently_reading": "currently-reading",
     "to_read": "to-read",
@@ -69,13 +68,12 @@ def _parse_book_pane(pane):
 
 
 def _fetch_page(url, cookie, retries=5, backoff=4):
-    headers = {"User-Agent": USER_AGENT}
     cookies = {"_storygraph_session": cookie}
     last_error = None
     for attempt in range(retries):
         try:
-            response = requests.get(url, headers=headers, cookies=cookies, timeout=15)
-        except requests.RequestException as exc:
+            response = requests.get(url, cookies=cookies, impersonate="chrome", timeout=15)
+        except RequestException as exc:
             last_error = exc
             time.sleep(backoff)
             continue

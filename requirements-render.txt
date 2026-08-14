@@ -37,5 +37,6 @@ urllib3==2.2.1
 
 beautifulsoup4>=4.12,<4.13
 soupsieve>=2.5
+curl_cffi>=0.7,<0.17
 
 python-dotenv==1.0.1
