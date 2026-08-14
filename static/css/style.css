@@ -247,6 +247,10 @@ main { display: block; padding: 2.5rem 0 5rem; }
   justify-content: center;
   gap: 1.5rem;
   flex-wrap: wrap;
+  width: fit-content;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
   border: 1px solid var(--border);
   background: var(--surface);
   border-radius: var(--radius);
