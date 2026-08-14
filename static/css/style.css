@@ -282,19 +282,18 @@ main { display: block; padding: 2.5rem 0 5rem; }
 .shelf {
   --spine-h: 150px;
   --spine-w: 30px;
-  --cover-w: 116px;
   --spine-gap: 34px;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   column-gap: 2px;
   row-gap: var(--spine-gap);
-  /* Room for the hover pull-out (lifts ~10px) and the caption below the
-     last row - without this, the collapsible wrapper's overflow:hidden
-     (needed for the expand/collapse animation) clips both. Pattern is
-     anchored to content-box so this padding doesn't shift the ledge
-     lines out of alignment with the rows they sit under. */
-  padding: 20px 4px 48px;
+  /* Bottom padding is room for the last row's hover pull-out + caption;
+     top room comes from the wrapper's margin below, not padding here,
+     since padding would sit inside this box's own background-painted
+     area and the repeating ledge pattern would bleed upward into it. */
+  padding: 0 0 48px;
+  margin-top: 22px;
   background-origin: content-box;
   background-image: repeating-linear-gradient(
     to bottom,
@@ -335,8 +334,13 @@ main { display: block; padding: 2.5rem 0 5rem; }
   transition: width .32s cubic-bezier(.22,1,.36,1), transform .32s cubic-bezier(.22,1,.36,1), box-shadow .32s ease;
   z-index: 1;
 }
+/* Hover width is derived from the book's real cover_ratio (--ratio, set
+   inline per book from storygraph_scraper's _cover_meta) so the box's
+   aspect ratio matches the image exactly - object-fit:cover then shows
+   the whole cover with zero crop instead of forcing a fixed 2:3 frame
+   that clips tall or wide covers. */
 .book-spine:hover .spine-body, .book-spine:focus-visible .spine-body {
-  width: var(--cover-w);
+  width: calc(var(--spine-h) * var(--ratio, .667));
   transform: rotate(-4deg) translateY(-10px);
   box-shadow: 0 18px 30px -10px rgba(0,0,0,.6);
   z-index: 30;
@@ -344,8 +348,8 @@ main { display: block; padding: 2.5rem 0 5rem; }
 
 .spine-body img {
   position: absolute;
-  top: 0; left: 0;
-  width: var(--cover-w);
+  inset: 0;
+  width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: left center;
@@ -383,11 +387,19 @@ main { display: block; padding: 2.5rem 0 5rem; }
   background: linear-gradient(to bottom, rgba(255,255,255,.1), rgba(255,255,255,.5));
 }
 
+/* Solid panel, not bare text over whatever's underneath - the row below
+   is often another busy cover, and pale/ink-muted text on top of that
+   was unreadable. */
 .spine-caption {
   position: absolute;
   left: 0;
   top: calc(100% + 8px);
-  width: var(--cover-w);
+  width: calc(var(--spine-h) * var(--ratio, .667));
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .4rem .55rem;
+  box-shadow: 0 10px 20px -8px rgba(0,0,0,.5);
   font-family: var(--font-mono);
   font-size: .66rem;
   line-height: 1.3;
@@ -401,7 +413,7 @@ main { display: block; padding: 2.5rem 0 5rem; }
 .book-spine:hover .spine-caption, .book-spine:focus-visible .spine-caption { opacity: 1; }
 
 @media (max-width: 500px) {
-  .shelf { --spine-h: 116px; --spine-w: 22px; --cover-w: 88px; --spine-gap: 40px; }
+  .shelf { --spine-h: 116px; --spine-w: 22px; --spine-gap: 40px; }
 }
 
 /* Collapsible shelves */
@@ -431,7 +443,12 @@ main { display: block; padding: 2.5rem 0 5rem; }
   transition: grid-template-rows .4s cubic-bezier(.4,0,.2,1);
 }
 .shelf-wrap[data-open="true"] { grid-template-rows: 1fr; }
-.shelf-wrap-inner { overflow: hidden; min-height: 0; }
+/* Clips vertically only (needed so the collapse animation actually hides
+   content) while leaving horizontal space open - overflow:hidden would
+   also cut off hover pull-outs on the leftmost/rightmost spines in a
+   row. flow-root keeps the shelf's own margin-top (its top pop-out room)
+   from collapsing through and throwing off this box's height. */
+.shelf-wrap-inner { display: flow-root; clip-path: inset(0 -100vw 0 -100vw); min-height: 0; }
 
 /* -----------------------------------------------------------------------
    Recommender page

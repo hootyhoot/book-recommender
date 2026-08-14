@@ -32,7 +32,7 @@ def main():
         print(f'refresh failed: {e}', file=sys.stderr)
         sys.exit(1)
 
-    sg.annotate_spine_text_colors(data)
+    sg.annotate_cover_meta(data)
 
     payload = {
         'username': username,

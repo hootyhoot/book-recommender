@@ -3,8 +3,6 @@
 
 {% block content %}
 <section class="hero">
-    <p class="eyebrow">reading log</p>
-    <h1>What I'm Reading</h1>
     {% if data %}
     <div class="hero-stats">
         <div class="hero-stat">
@@ -58,7 +56,7 @@
 <div class="shelf-wrap" id="shelf-read" data-open="true">
     <div class="shelf-wrap-inner"><div class="shelf">
         {% for book in data.read %}
-        <a class="book-spine" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ book.title }} by {{ book.author }}">
+        <a class="book-spine" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ book.title }} by {{ book.author }}" style="--ratio: {{ book.cover_ratio|default(0.667) }};">
             <span class="spine-body">
                 {% if book.cover_url %}<img src="{{ book.cover_url }}" alt="" loading="lazy">{% endif %}
                 <span class="spine-title spine-title--{{ book.spine_text|default('light') }}">{{ book.title }}</span>
@@ -82,7 +80,7 @@
 <div class="shelf-wrap" id="shelf-pile" data-open="false">
     <div class="shelf-wrap-inner"><div class="shelf">
         {% for book in data.to_read %}
-        <a class="book-spine" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ book.title }} by {{ book.author }}">
+        <a class="book-spine" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ book.title }} by {{ book.author }}" style="--ratio: {{ book.cover_ratio|default(0.667) }};">
             <span class="spine-body">
                 {% if book.cover_url %}<img src="{{ book.cover_url }}" alt="" loading="lazy">{% endif %}
                 <span class="spine-title spine-title--{{ book.spine_text|default('light') }}">{{ book.title }}</span>

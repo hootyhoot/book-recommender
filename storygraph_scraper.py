@@ -126,25 +126,32 @@ def _relative_luminance(rgb):
     return 0.2126 * r + 0.7152 * g + 0.0722 * b
 
 
-def spine_text_color(cover_url):
-    """'dark' or 'light' - whichever reads clearly over the strip of the
-    cover that's actually visible on the spine (its left edge), sampled
-    from the real image rather than guessed from genre/palette."""
+def _cover_meta(cover_url):
+    """(spine_text, cover_ratio) sampled directly from the real image:
+    spine_text is 'dark' or 'light', whichever reads clearly over the
+    strip of the cover actually visible on the spine (its left edge);
+    cover_ratio is width/height, used so the hover pull-out can size
+    itself to the book's real proportions instead of cropping tall or
+    wide covers to an assumed 2:3."""
     try:
         resp = requests.get(cover_url, impersonate="chrome", timeout=10)
         img = Image.open(io.BytesIO(resp.content)).convert("RGB")
         w, h = img.size
         strip = img.crop((0, 0, max(1, w // 4), h)).resize((6, 6))
         avg = tuple(sum(c) / len(c) for c in zip(*strip.getdata()))
-        return "dark" if _relative_luminance(avg) > 0.55 else "light"
+        text_color = "dark" if _relative_luminance(avg) > 0.55 else "light"
+        return text_color, round(w / h, 4)
     except Exception:
-        return "light"
+        return "light", 0.667
 
 
-def annotate_spine_text_colors(data):
-    """Adds a spine_text ('dark'/'light') field to every book across all
-    three lists in a fetch_all()-shaped dict, in place."""
+def annotate_cover_meta(data):
+    """Adds spine_text and cover_ratio (see _cover_meta) to every book
+    across all three lists in a fetch_all()-shaped dict, in place."""
     for books in data.values():
         for book in books:
-            book["spine_text"] = spine_text_color(book["cover_url"]) if book.get("cover_url") else "light"
+            if book.get("cover_url"):
+                book["spine_text"], book["cover_ratio"] = _cover_meta(book["cover_url"])
+            else:
+                book["spine_text"], book["cover_ratio"] = "light", 0.667
     return data
