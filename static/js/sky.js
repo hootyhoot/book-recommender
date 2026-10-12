@@ -1,32 +1,76 @@
-// Pixel sky behind the page: drifting clouds, and at night (dark theme) a
-// field of glimmering 4-pointed stars with the occasional shooting star.
-// Shared by mikhail.codes (homepage + inner pages) and books.mikhail.codes.
-// Fixed to the viewport; colours come from CSS variables so it follows the
-// theme. <canvas id="sky" data-clouds="off"> skips the clouds (the homepage
-// hero draws its own).
+// Pixel sky behind the page, shared by mikhail.codes (homepage + inner pages)
+// and books.mikhail.codes. Fixed to the viewport; colours come from CSS
+// variables so it follows the theme.
+//   always:  three layers of drifting clouds (far / mid / near) for depth
+//   night:   glimmering 4-pointed stars + the occasional shooting star
+//   day:     a far-off jet laying a contrail, and small flocks of birds
+// <canvas id="sky" data-clouds="off"> skips the clouds.
 (function () {
   var c = document.getElementById('sky');
   if (!c) return;
   var x = c.getContext('2d');
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var showClouds = c.getAttribute('data-clouds') !== 'off';
-  var P = 8, S = 2; // cloud block size, star pixel size
-  var W, H, clouds = [], stars = [], shooting = null, nextShot = 0, cloudColor, night;
+  var S = 2; // star / sprite pixel size
+  var W, H, layers = [], stars = [], shooting = null, nextShot = 0, night;
+  var jet = null, nextJet = 0, trail = [], flock = null, nextFlock = 0;
+  var pal = {};
   var STAR_COLORS = ['#eceee6', '#eceee6', '#eceee6', '#cfe4ff', '#ffe9b8'];
   c.style.imageRendering = 'pixelated';
 
-  function loadTheme() {
-    cloudColor = getComputedStyle(document.documentElement).getPropertyValue('--cloud').trim();
-    night = document.documentElement.getAttribute('data-theme') !== 'light';
+  function css(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  // blend two #rrggbb colours: t=0 -> a, t=1 -> b
+  function mix(a, b, t) {
+    var pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16), out = 0;
+    for (var sh = 16; sh >= 0; sh -= 8) {
+      var ca = (pa >> sh) & 255, cb = (pb >> sh) & 255;
+      out |= Math.round(ca + (cb - ca) * t) << sh;
+    }
+    return '#' + ('00000' + out.toString(16)).slice(-6);
   }
 
-  function size() {
-    W = c.width = window.innerWidth; H = c.height = window.innerHeight;
-    clouds = [];
-    var n = Math.max(4, Math.round(W / 180));
-    for (var i = 0; i < n; i++) {
-      clouds.push({x: Math.random() * W, y: Math.random() * H, w: 3 + (Math.random() * 6 | 0), v: .15 + Math.random() * .3});
-    }
+  function loadTheme() {
+    night = document.documentElement.getAttribute('data-theme') !== 'light';
+    var cloud = css('--cloud') || '#1a1c18', bg = css('--bg') || '#0c0d0b';
+    // far clouds sit closer to the background colour, near ones are full strength
+    pal.cloud = [mix(bg, cloud, 0.45), mix(bg, cloud, 0.75), cloud];
+    pal.ink = css('--ink-muted') || '#6b6046';
+  }
+
+  // ---------- clouds: three parallax layers ----------
+  var LAYERS = [
+    {P: 4, speed: [0.05, 0.12], per: 200},  // far: small, slow
+    {P: 6, speed: [0.12, 0.25], per: 260},  // mid
+    {P: 8, speed: [0.25, 0.45], per: 340}   // near: big, quicker
+  ];
+  function makeCloud(L, xpos) {
+    var w = 4 + (Math.random() * 7 | 0);
+    // a lumpy pixel cloud: a wide base row, a narrower row on top, and a bump
+    var top = Math.max(2, w - 2 - (Math.random() * 3 | 0)), off = 1 + (Math.random() * (w - top) | 0);
+    var bumpW = Math.max(1, top - 2 - (Math.random() * 2 | 0));
+    return {
+      x: xpos, y: Math.random() * H * 0.9,
+      v: L.speed[0] + Math.random() * (L.speed[1] - L.speed[0]),
+      rows: [[0, w], [off, top], [off + 1, bumpW]]
+    };
+  }
+  function drawCloudLayer(i) {
+    var L = LAYERS[i], P = L.P;
+    x.fillStyle = pal.cloud[i];
+    layers[i].forEach(function (cl, k) {
+      cl.rows.forEach(function (r, ri) {
+        x.fillRect(Math.round(cl.x + r[0] * P), Math.round(cl.y - ri * P), r[1] * P, P);
+      });
+      if (!reduce) {
+        cl.x += cl.v;
+        // drifted off the right edge: respawn as a fresh cloud off the left edge
+        if (cl.x > W) layers[i][k] = makeCloud(L, -cl.rows[0][1] * P);
+      }
+    });
+  }
+
+  // ---------- stars (night) ----------
+  function makeStars() {
     stars = [];
     var count = Math.round(W * H / 9000);
     for (var j = 0; j < count; j++) {
@@ -102,11 +146,101 @@
     if (s.life > s.max || s.x < -200 || s.x > W + 200 || s.y > H + 200) shooting = null;
   }
 
+  // ---------- day: a far-off jet laying a twin contrail ----------
+  // tiny side-view airliner, nose to the right, 2px pixels
+  var JET = ['T.......', 'TTFFFFFF', '..WWW...'];
+  var JET_PAL = {T: '#b85a3a', F: '#6b6046', W: '#8d9288'};
+  function launchJet(now) {
+    var dir = Math.random() < 0.5 ? 1 : -1;
+    jet = {
+      x: dir > 0 ? -30 : W + 30, y: H * (0.06 + Math.random() * 0.22),
+      vx: dir * (0.55 + Math.random() * 0.35), vy: -(Math.random() * 0.06), dir: dir, emit: 0
+    };
+    nextJet = now + 20000 + Math.random() * 20000;
+  }
+  function drawJet() {
+    var j = jet;
+    // drop a contrail puff every few frames behind each of the two engines
+    if (++j.emit % 3 === 0) {
+      var tailX = j.dir > 0 ? j.x : j.x + JET[0].length * S;
+      trail.push({x: tailX, y: j.y + 4, age: 0}, {x: tailX, y: j.y + 7, age: 0});
+    }
+    JET.forEach(function (row, ry) {
+      for (var i = 0; i < row.length; i++) {
+        var ch = row[j.dir > 0 ? i : row.length - 1 - i]; // mirror when flying left
+        if (JET_PAL[ch]) {
+          x.fillStyle = JET_PAL[ch];
+          x.fillRect(Math.round(j.x / S) * S + i * S, Math.round(j.y / S) * S + ry * S, S, S);
+        }
+      }
+    });
+    j.x += j.vx; j.y += j.vy;
+    if (j.x < -60 || j.x > W + 60) jet = null;
+  }
+  // contrail puffs widen and fade over ~9s, so the two engine trails merge
+  function drawTrail() {
+    var keep = [];
+    x.fillStyle = '#ffffff';
+    for (var i = 0; i < trail.length; i++) {
+      var p = trail[i];
+      p.age++;
+      var life = p.age / 540;
+      if (life >= 1) continue;
+      keep.push(p);
+      var spread = 1 + Math.floor(life * 4); // 1..4 pixels thick
+      x.globalAlpha = (1 - life) * 0.85;
+      x.fillRect(Math.round(p.x / S) * S, Math.round((p.y - spread) / S) * S, S * 2, S * spread);
+    }
+    trail = keep;
+    x.globalAlpha = 1;
+  }
+
+  // ---------- day: a small V of flapping pixel birds ----------
+  var BIRD = [['#...#', '.#.#.', '..#..'], ['.....', '##.##', '..#..']]; // wings up / level
+  var BQ = 3; // bird pixel size
+  function launchFlock(now) {
+    var dir = Math.random() < 0.5 ? 1 : -1, n = 3 + (Math.random() * 5 | 0), birds = [];
+    for (var i = 0; i < n; i++) {
+      var rank = Math.ceil(i / 2), side = i % 2 ? -1 : 1; // leader, then alternate arms of the V
+      birds.push({dx: -dir * rank * 22, dy: i ? side * rank * 12 : 0, phase: Math.random() * 6});
+    }
+    flock = {x: dir > 0 ? -40 : W + 40, y: H * (0.1 + Math.random() * 0.4), vx: dir * (1.1 + Math.random() * 0.6), t: 0, birds: birds};
+    nextFlock = now + 12000 + Math.random() * 13000;
+  }
+  function drawFlock() {
+    var f = flock;
+    f.t++;
+    x.fillStyle = pal.ink;
+    x.globalAlpha = 0.75;
+    f.birds.forEach(function (b) {
+      var shape = BIRD[Math.floor((f.t + b.phase * 10) / 9) % 2];
+      var bx = Math.round((f.x + b.dx) / BQ) * BQ;
+      var by = Math.round((f.y + b.dy + Math.sin((f.t + b.phase * 20) / 25) * 3) / BQ) * BQ;
+      shape.forEach(function (row, ry) {
+        for (var i = 0; i < row.length; i++) if (row[i] === '#') x.fillRect(bx + i * BQ, by + ry * BQ, BQ, BQ);
+      });
+    });
+    x.globalAlpha = 1;
+    f.x += f.vx;
+    if (f.x < -120 || f.x > W + 120) flock = null;
+  }
+
+  function size() {
+    W = c.width = window.innerWidth; H = c.height = window.innerHeight;
+    layers = LAYERS.map(function (L) {
+      var n = Math.max(2, Math.round(W / L.per)), out = [];
+      for (var i = 0; i < n; i++) out.push(makeCloud(L, Math.random() * W));
+      return out;
+    });
+    makeStars();
+    trail = [];
+  }
+
   function frame(now) {
     now = now || 0;
     var t = now / 1000;
     x.clearRect(0, 0, W, H);
-    // stars first, clouds after, so clouds drift in front of the night sky
+    // back to front: stars, far clouds, jet + contrail, mid clouds, birds, near clouds
     if (night) {
       stars.forEach(function (s) { drawStar(s, reduce ? 1 : t); });
       if (!reduce) {
@@ -115,22 +249,35 @@
       }
       x.globalAlpha = 1;
     }
-    if (showClouds) {
-      x.fillStyle = cloudColor;
-      clouds.forEach(function (cl) {
-        for (var i = 0; i < cl.w; i++) x.fillRect((cl.x + i * P) | 0, cl.y | 0, P, P);
-        for (var j = 1; j < cl.w - 1; j++) x.fillRect((cl.x + j * P) | 0, (cl.y - P) | 0, P, P);
-        if (!reduce) { cl.x += cl.v; if (cl.x > W) cl.x = -cl.w * P; }
-      });
+    if (showClouds) drawCloudLayer(0);
+    if (!night && !reduce) {
+      if (!jet && now > nextJet) launchJet(now);
+      drawTrail();
+      if (jet) drawJet();
     }
+    if (showClouds) drawCloudLayer(1);
+    if (!night && !reduce) {
+      if (!flock && now > nextFlock) launchFlock(now);
+      if (flock) drawFlock();
+    }
+    if (showClouds) drawCloudLayer(2);
     if (!reduce) requestAnimationFrame(frame);
   }
 
   loadTheme(); size();
-  nextShot = 2500 + Math.random() * 4000; // first one fairly soon after load
-  window.addEventListener('resize', function () { size(); if (reduce) frame(); });
-  // theme toggles flip data-theme on <html>; stars only show at night
-  new MutationObserver(function () { loadTheme(); if (reduce) frame(); })
+  // first events fairly soon after load
+  nextShot = 2500 + Math.random() * 4000;
+  nextJet = 3000 + Math.random() * 4000;
+  nextFlock = 6000 + Math.random() * 6000;
+  // phones resize the viewport height as the address bar shows/hides; only
+  // regenerate the sky when the width really changes, otherwise just stretch
+  window.addEventListener('resize', function () {
+    if (window.innerWidth === W) { H = c.height = window.innerHeight; c.width = W; }
+    else size();
+    if (reduce) frame();
+  });
+  // theme toggles flip data-theme on <html>: stars at night, jets + birds by day
+  new MutationObserver(function () { loadTheme(); trail = []; jet = null; flock = null; if (reduce) frame(); })
     .observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
   if (reduce) frame(); else requestAnimationFrame(frame);
 })();
