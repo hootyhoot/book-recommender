@@ -109,6 +109,8 @@ def fetch_list(target, username, max_pages=25):
     cookie = _session_cookie()
     books = []
     for page in range(1, max_pages + 1):
+        if page > 1:
+            time.sleep(1)  # space out pagination requests within a list too
         url = f"https://app.thestorygraph.com/{target}/{username}?page={page}"
         html = _fetch_page(url, cookie)
         soup = BeautifulSoup(html, "html.parser")
