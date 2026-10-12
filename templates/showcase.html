@@ -4,7 +4,7 @@
 {% block content %}
 <section class="hero">
     <h1 class="pixel-title" aria-label="Bookshelf">{% for ch in 'Bookshelf' %}<span aria-hidden="true" style="--i: {{ loop.index0 }}">{{ ch }}</span>{% endfor %}</h1>
-    <p class="hero-sub">what i've read, what i'm reading, and the pile.</p>
+    <p class="hero-sub">what i've read, what i'm reading, and what i want to read.</p>
     {% if data %}
     <div class="hero-stats">
         <div class="hero-stat">
@@ -13,7 +13,7 @@
         </div>
         <div class="hero-stat">
             <span class="hero-stat-value">{{ data.to_read|length }}</span>
-            <span class="hero-stat-label">on the pile</span>
+            <span class="hero-stat-label">want to read</span>
         </div>
         <div class="hero-stat">
             <span class="hero-stat-value">{{ data.currently_reading|length }}</span>
@@ -90,7 +90,7 @@
 
 <div class="section-heading">
     <button class="section-toggle" id="toggle-pile" aria-expanded="false" aria-controls="shelf-pile">
-        <span class="heading-left"><h2>the pile</h2><span class="section-count">{{ data.to_read|length }} books</span></span>
+        <span class="heading-left"><h2>want to read</h2><span class="section-count">{{ data.to_read|length }} books</span></span>
         <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
     </button>
 </div>
