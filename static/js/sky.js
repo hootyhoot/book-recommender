@@ -38,33 +38,49 @@
   }
 
   // ---------- clouds: three parallax layers ----------
+  // per = one cloud per this many px of width; the day sky is about twice as
+  // cloudy as the night one so the stars still show through after dark
   var LAYERS = [
-    {P: 4, speed: [0.05, 0.12], per: 200},  // far: small, slow
-    {P: 6, speed: [0.12, 0.25], per: 260},  // mid
-    {P: 8, speed: [0.25, 0.45], per: 340}   // near: big, quicker
+    {P: 4, speed: [0.05, 0.12], per: 200, perDay: 100},  // far: small, slow
+    {P: 6, speed: [0.12, 0.25], per: 260, perDay: 130},  // mid
+    {P: 8, speed: [0.25, 0.45], per: 340, perDay: 170}   // near: big, quicker
   ];
+  function rnd(n) { return Math.random() * n | 0; }
+  // a puffy pixel cloud, roughly symmetric: a rounded underside, a wide base,
+  // a narrower middle and a bump on top, each row centred over the one below
+  // (with a little jitter) so neither side ends up as a one-sided staircase
   function makeCloud(L, xpos) {
-    var w = 4 + (Math.random() * 7 | 0);
-    // a lumpy pixel cloud: a wide base row, a narrower row on top, and a bump
-    var top = Math.max(2, w - 2 - (Math.random() * 3 | 0)), off = 1 + (Math.random() * (w - top) | 0);
-    var bumpW = Math.max(1, top - 2 - (Math.random() * 2 | 0));
+    var w = 5 + rnd(7);
+    var mid = Math.max(3, w - 2 - rnd(3));
+    var midOff = Math.min(Math.max(1, ((w - mid) >> 1) + rnd(3) - 1), w - mid - 1);
+    var bump = Math.max(2, mid - 2 - rnd(2));
+    var bumpOff = midOff + Math.min(Math.max(0, ((mid - bump) >> 1) + rnd(3) - 1), mid - bump);
     return {
       x: xpos, y: Math.random() * H * 0.9,
       v: L.speed[0] + Math.random() * (L.speed[1] - L.speed[0]),
-      rows: [[0, w], [off, top], [off + 1, bumpW]]
+      // [offset, width] per row, bottom to top; the first row sits under the base.
+      // Small clouds skip the top bump so they don't come out tall and pawn-shaped.
+      rows: w >= 7 ? [[1, w - 2], [0, w], [midOff, mid], [bumpOff, bump]] : [[1, w - 2], [0, w], [midOff, mid]]
     };
+  }
+  function buildClouds() {
+    layers = LAYERS.map(function (L) {
+      var n = Math.max(2, Math.round(W / (night ? L.per : L.perDay))), out = [];
+      for (var i = 0; i < n; i++) out.push(makeCloud(L, Math.random() * W));
+      return out;
+    });
   }
   function drawCloudLayer(i) {
     var L = LAYERS[i], P = L.P;
     x.fillStyle = pal.cloud[i];
     layers[i].forEach(function (cl, k) {
       cl.rows.forEach(function (r, ri) {
-        x.fillRect(Math.round(cl.x + r[0] * P), Math.round(cl.y - ri * P), r[1] * P, P);
+        x.fillRect(Math.round(cl.x + r[0] * P), Math.round(cl.y - (ri - 1) * P), r[1] * P, P);
       });
       if (!reduce) {
         cl.x += cl.v;
         // drifted off the right edge: respawn as a fresh cloud off the left edge
-        if (cl.x > W) layers[i][k] = makeCloud(L, -cl.rows[0][1] * P);
+        if (cl.x > W) layers[i][k] = makeCloud(L, -cl.rows[1][1] * P);
       }
     });
   }
@@ -227,11 +243,7 @@
 
   function size() {
     W = c.width = window.innerWidth; H = c.height = window.innerHeight;
-    layers = LAYERS.map(function (L) {
-      var n = Math.max(2, Math.round(W / L.per)), out = [];
-      for (var i = 0; i < n; i++) out.push(makeCloud(L, Math.random() * W));
-      return out;
-    });
+    buildClouds();
     makeStars();
     trail = [];
   }
@@ -277,7 +289,7 @@
     if (reduce) frame();
   });
   // theme toggles flip data-theme on <html>: stars at night, jets + birds by day
-  new MutationObserver(function () { loadTheme(); trail = []; jet = null; flock = null; if (reduce) frame(); })
+  new MutationObserver(function () { loadTheme(); buildClouds(); trail = []; jet = null; flock = null; if (reduce) frame(); })
     .observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
   if (reduce) frame(); else requestAnimationFrame(frame);
 })();
