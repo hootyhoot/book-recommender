@@ -3,6 +3,8 @@
 
 {% block content %}
 <section class="hero">
+    <h1 class="pixel-title" aria-label="Bookshelf">{% for ch in 'Bookshelf' %}<span aria-hidden="true" style="--i: {{ loop.index0 }}">{{ ch }}</span>{% endfor %}</h1>
+    <p class="hero-sub">what i've read, what i'm reading, and the pile.</p>
     {% if data %}
     <div class="hero-stats">
         <div class="hero-stat">

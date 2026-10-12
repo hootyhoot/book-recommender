@@ -4,8 +4,8 @@
 {% block content %}
 <section class="hero">
     <p class="eyebrow">book recommender</p>
-    <h1>Find Your Next Book</h1>
-    <p style="color:var(--ink-muted); max-width:60ch;">Search by a title you already like, or describe what you're in the mood for &mdash; matched against a library of 10,000 books using text embeddings.</p>
+    <h1 class="pixel-title" aria-label="Find your next book">{% for ch in 'Find your next book' %}<span aria-hidden="true" style="--i: {{ loop.index0 }}">{{ ch if ch != ' ' else '\u00a0' }}</span>{% endfor %}</h1>
+    <p style="color:var(--ink-muted); max-width:60ch; margin: 0 auto;">Search by a title you already like, or describe what you're in the mood for &mdash; matched against a library of 10,000 books using text embeddings.</p>
 </section>
 
 <div class="panel">
