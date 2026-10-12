@@ -114,7 +114,9 @@ p { margin: 0 0 1em; }
    ----------------------------------------------------------------------- */
 
 .container { max-width: var(--max-width); margin: 0 auto; padding: 0 1.5rem; }
-main { display: block; padding: 2.5rem 0 5rem; }
+/* footer sits at the bottom of the window even when the page is short */
+body { min-height: 100vh; display: flex; flex-direction: column; }
+main { display: block; flex: 1 0 auto; padding: 2.5rem 0 5rem; }
 
 /* Header mirrors mikhail.codes' nav: name on the left, plain pixel-font
    links on the right (current page in green), square block theme button */
