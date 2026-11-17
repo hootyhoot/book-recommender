@@ -569,6 +569,14 @@ main { display: block; flex: 1 0 auto; padding: 2.5rem 0 5rem; }
   padding: 1.5rem;
 }
 
+.data-credit {
+  margin: 1rem auto 0;
+  max-width: 60ch;
+  text-align: center;
+  font-size: .8rem;
+  color: var(--ink-muted);
+}
+
 #query-form { display: flex; flex-direction: column; gap: .9rem; margin-top: 1.25rem; }
 
 select, input[type="text"] {

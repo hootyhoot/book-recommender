@@ -5,7 +5,7 @@
 <section class="hero">
     <p class="eyebrow">book recommender</p>
     <h1 class="pixel-title" aria-label="Find your next book">{% for ch in 'Find your next book' %}<span aria-hidden="true" style="--i: {{ loop.index0 }}">{{ ch if ch != ' ' else '\u00a0' }}</span>{% endfor %}</h1>
-    <p style="color:var(--ink-muted); max-width:60ch; margin: 0 auto;">Search by a title you already like, or describe what you're in the mood for &mdash; matched against a library of 10,000 books using text embeddings.</p>
+    <p style="color:var(--ink-muted); max-width:60ch; margin: 0 auto;">Search by a title you already like, or describe what you're in the mood for &mdash; matched against 25,000 well-rated books, from classics to this year's award nominees, using text embeddings.</p>
 </section>
 
 <div class="panel">
@@ -46,6 +46,8 @@
     <div id="recommendations"></div>
     <button class="btn" id="show-more" type="button">show more</button>
 </div>
+
+<p class="data-credit">Book data from Goodreads' <a href="https://zenodo.org/record/4265095" target="_blank" rel="noopener noreferrer">Best Books Ever</a> dataset (CC BY-NC 4.0), <a href="https://hardcover.app" target="_blank" rel="noopener noreferrer">Hardcover</a> and the Goodreads Choice Awards.</p>
 {% endblock %}
 
 {% block scripts %}
@@ -75,7 +77,7 @@
         div.innerHTML =
             '<h3>' + book.Book + '</h3>' +
             '<p class="book-author">' + book.Author + '</p>' +
-            '<p>Average rating: ' + book.Avg_Rating + '/5.00</p>' +
+            (book.Avg_Rating == null ? '' : '<p>Average rating: ' + book.Avg_Rating + '/5.00</p>') +
             '<p><a href="' + book.URL + '" target="_blank" rel="noopener noreferrer">more info &rarr;</a></p>';
         return div;
     }
@@ -94,7 +96,7 @@
         if (sortBy === 'author') {
             allRecommendations.sort((a, b) => a.Author.localeCompare(b.Author));
         } else if (sortBy === 'rating') {
-            allRecommendations.sort((a, b) => b.Avg_Rating - a.Avg_Rating);
+            allRecommendations.sort((a, b) => (b.Avg_Rating || 0) - (a.Avg_Rating || 0));
         } else {
             allRecommendations = originalRecommendations.map((item) => ({ ...item }));
         }

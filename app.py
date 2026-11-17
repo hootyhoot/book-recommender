@@ -2,177 +2,186 @@ from flask import Flask, render_template, request, jsonify, url_for
 from markupsafe import Markup
 import pandas as pd
 import numpy as np
-import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-from nltk.stem import WordNetLemmatizer
 import re
 import requests
-from sklearn.metrics.pairwise import cosine_similarity
-from fuzzywuzzy import process
+import threading
+from collections import OrderedDict
+from rapidfuzz import process, fuzz
+from rapidfuzz.utils import default_process
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 app = Flask(__name__)
 
 load_dotenv()
 
-# NLTK data is pre-downloaded once at build time (see the build command:
-# `python -m nltk.downloader -d ./nltk_data ...`) into a folder next to this
-# file, so containers never need network access for it on cold start.
-# Adding it to nltk's search path explicitly avoids depending on cwd or an
-# env var being set correctly by the host.
-_nltk_data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nltk_data')
-if os.path.isdir(_nltk_data_dir):
-    nltk.data.path.append(_nltk_data_dir)
+HERE = os.path.dirname(os.path.abspath(__file__))
 
-# Local-dev fallback for when that data isn't already present (e.g. running
-# app.py directly without having run the build command first).
-for _resource, _path in [('punkt', 'tokenizers/punkt'), ('stopwords', 'corpora/stopwords'), ('wordnet', 'corpora/wordnet')]:
+# The catalog (built offline by "Pre-process Steps/build_catalog.py"): one row
+# of metadata per book, and a matching row of unit-length bge-m3 embeddings,
+# so cosine similarity is a plain dot product.
+books = pd.read_parquet(os.path.join(HERE, 'books.parquet'))
+embeddings = np.load(os.path.join(HERE, 'embeddings.npy')).astype(np.float32)
+titles = books['Book'].tolist()
+
+
+def _bayesian(avg, n, prior_n):
+    """Average rating pulled towards 3.9 when it rests on few ratings."""
+    avg = avg.fillna(3.9)
+    return (prior_n * 3.9 + n * avg) / (prior_n + n)
+
+
+# A small nudge towards well-rated, widely-read books, so near-ties in
+# similarity go to the better book, plus a little more for Goodreads Choice
+# Award nominees (and more again for winners). Goodreads counts run to
+# millions and Hardcover's to thousands, so each source gets its own prior
+# and scale.
+_goodreads = (books['Source'] == 'goodreads').to_numpy()
+_rating = np.where(_goodreads,
+                   _bayesian(books['Avg_Rating'], books['Num_Ratings'], 2000),
+                   _bayesian(books['Avg_Rating'], books['Num_Ratings'], 50))
+_reach = np.log1p(books['Num_Ratings'].to_numpy(dtype=np.float64))
+_reach = np.where(_goodreads, _reach / _reach[_goodreads].max(),
+                  _reach / max(_reach[~_goodreads].max(initial=0), 1))
+quality = (0.06 * np.clip(_rating - 3.9, -0.6, 0.6) + 0.02 * _reach
+           + 0.015 * books['Choice'].to_numpy()).astype(np.float32)
+
+_series = books['Series'].fillna('').str.lower().to_numpy()
+_author = books['Author'].str.lower().to_numpy()
+_title_key = books['Book'].str.lower().str.replace(r'\s*\([^)]*\)\s*$', '', regex=True) \
+    .str.replace(r'[^a-z0-9]', '', regex=True).to_numpy()
+
+# Titles as typed by a person: without the "(Dune, #1)" series tag.
+_match_titles = [default_process(t) for t in books['Book'].str.replace(r'\s*\([^)]*#[^)]*\)\s*$', '', regex=True)]
+_popularity = np.where(_goodreads, books['Num_Ratings'], books['Num_Ratings'] * 300)
+
+# A rating is only shown once a handful of people have given one.
+_rated = (books['Num_Ratings'] >= 5).to_numpy()
+
+RESULTS = 15
+PER_AUTHOR = 2
+
+
+def _results(scores, exclude=None):
+    """Top books by score, at most one per series and PER_AUTHOR per author,
+    so a search doesn't come back as five books of the same series."""
+    exclude = exclude or (lambda i: False)
+    seen_series, seen_titles, per_author, out = set(), set(), {}, []
+    for i in np.argsort(-scores)[:RESULTS * 20]:
+        series, author, key = _series[i], _author[i], _title_key[i]
+        if exclude(i) or key in seen_titles or (series and series in seen_series) \
+                or per_author.get(author, 0) >= PER_AUTHOR:
+            continue
+        seen_titles.add(key)
+        if series:
+            seen_series.add(series)
+        per_author[author] = per_author.get(author, 0) + 1
+        out.append({'Book': titles[i], 'Author': books['Author'].iat[i],
+                    'Avg_Rating': round(float(books['Avg_Rating'].iat[i]), 2) if _rated[i] else None,
+                    'URL': books['URL'].iat[i]})
+        if len(out) == RESULTS:
+            break
+    return out
+
+
+# --- Query embeddings: Cloudflare Workers AI, bge-m3 -------------------------
+#
+# The account's free allocation is 10,000 neurons a day, but Cloudflare didn't
+# refuse calls past it when building the catalog, so it can't be relied on as
+# a limit. The app keeps its own tally of the neurons Cloudflare reports per
+# call instead, and stops calling once AI_DAILY_BUDGET is spent for the UTC
+# day, so heavy traffic can never run up usage.
+AI_DAILY_BUDGET = 1000   # neurons; a typical search costs ~0.01
+AI_URL = 'https://api.cloudflare.com/client/v4/accounts/{}/ai/run/@cf/baai/bge-m3'
+AI_USAGE_PATH = os.path.join(HERE, 'ai_usage.json')
+MAX_QUERY_CHARS = 300
+
+_ai_lock = threading.Lock()
+_query_cache = OrderedDict()  # query text -> embedding
+
+
+def _ai_usage():
     try:
-        nltk.data.find(_path)
-    except LookupError:
-        nltk.download(_resource)
+        with open(AI_USAGE_PATH) as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
 
-# Load preprocessed data with embeddings.
-# The embeddings column comes out of parquet as a column of per-row numpy
-# arrays; a plain `.tolist()` blows that up into ~9700 * 1536 individual
-# Python float objects (~400MB) on top of the DataFrame's own copy. Pull it
-# into one compact float32 matrix instead and drop it from the DataFrame,
-# which is the difference between comfortably fitting in 512MB and not.
-df = pd.read_parquet('embeddings.parquet')
-tfidf_matrix = np.array(df['embeddings'].tolist(), dtype=np.float32)
-df = df.drop(columns=['embeddings']).reset_index(drop=True)
-df.info(verbose=False, memory_usage="deep")
 
-# Initialize lemmatizer
-lemmatizer = WordNetLemmatizer()
+def embed_query(text):
+    text = text[:MAX_QUERY_CHARS]
+    with _ai_lock:
+        if text in _query_cache:
+            _query_cache.move_to_end(text)
+            return _query_cache[text]
+        today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+        usage = _ai_usage()
+        if usage.get(today, 0) >= AI_DAILY_BUDGET:
+            raise Exception("Description search has hit its daily limit. Try again tomorrow, "
+                            "or search by title in the meantime.")
+        try:
+            r = requests.post(AI_URL.format(os.getenv('CF_ACCOUNT_ID')),
+                              headers={'Authorization': f"Bearer {os.getenv('CF_AI_TOKEN')}"},
+                              json={'text': [text]}, timeout=20)
+            body = r.json()
+        except (requests.exceptions.RequestException, ValueError):
+            raise Exception("Couldn't reach the embedding service. Please try again.")
+        if not body.get('success'):
+            app.logger.error(f"Workers AI error: {body.get('errors')}")
+            raise Exception("Description search is unavailable right now. Try searching by title.")
+        # Only today's entry is kept, so the file never grows.
+        with open(AI_USAGE_PATH, 'w') as f:
+            json.dump({today: usage.get(today, 0) + body['result']['meta']['neurons']}, f)
+        vec = np.asarray(body['result']['data'][0], dtype=np.float32)
+        vec /= np.linalg.norm(vec)
+        _query_cache[text] = vec
+        if len(_query_cache) > 1000:
+            _query_cache.popitem(last=False)
+        return vec
 
-# Define stop words
-stop_words = set(stopwords.words('english'))
-
-def preprocess_text(text):
-    # Remove URLs
-    text = re.sub(r'http\S+', '', text)
-    # Remove non-alphabetic characters
-    text = re.sub(r'[^a-zA-Z\s]', '', text)
-    # Convert to lowercase
-    text = text.lower()
-    # Tokenize
-    tokens = word_tokenize(text)
-    # Remove stopwords
-    tokens = [word for word in tokens if word not in stop_words]
-    # Lemmatize
-    tokens = [lemmatizer.lemmatize(word) for word in tokens]
-    return ' '.join(tokens)
-
-def get_openai_embedding(text):
-    try:
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f"Bearer {os.getenv('openai_key')}",
-        }
-        data = {
-            "input": text,
-            "model": "text-embedding-3-small"
-        }
-        response = requests.post('https://api.openai.com/v1/embeddings', headers=headers, json=data, timeout=30)
-        response.raise_for_status()  # Raises HTTPError for bad responses
-        
-        result = response.json()
-        
-        # Check if the response has the expected structure
-        if 'data' not in result or len(result['data']) == 0:
-            raise ValueError("OpenAI API returned unexpected response format")
-        
-        return result['data'][0]['embedding']
-    
-    except requests.exceptions.Timeout:
-        raise Exception("OpenAI API request timed out. Please try again.")
-    except requests.exceptions.ConnectionError:
-        raise Exception("Failed to connect to OpenAI API. Please check your internet connection.")
-    except requests.exceptions.HTTPError as e:
-        if response.status_code == 401:
-            raise Exception("Invalid OpenAI API key. Please check your credentials.")
-        elif response.status_code == 429:
-            raise Exception("OpenAI API rate limit exceeded. Please try again later.")
-        elif response.status_code == 500:
-            raise Exception("OpenAI API is experiencing issues. Please try again later.")
-        else:
-            raise Exception(f"OpenAI API error: {response.status_code} - {response.text}")
-    except KeyError:
-        raise Exception("Unexpected response format from OpenAI API")
-    except Exception as e:
-        raise Exception(f"Error getting embedding: {str(e)}")
-
-def preprocess_query(query):
-    return preprocess_text(query)
 
 def get_recommendations_by_description(user_query):
-    try:
-        if not user_query or user_query.strip() == "":
-            raise ValueError("Please enter a description to search")
-        
-        cleaned_query = preprocess_query(user_query)
-        
-        if not cleaned_query or cleaned_query.strip() == "":
-            raise ValueError("Your query didn't contain any meaningful words. Please try a different description.")
-        
-        query_embedding = get_openai_embedding(cleaned_query)
-        similarity_scores = cosine_similarity([query_embedding], tfidf_matrix)
-        top_n = 15
-        top_n_indices = similarity_scores[0].argsort()[-top_n:][::-1]
-        recommended_books = df.iloc[top_n_indices]
-        return recommended_books[['Book', 'Author', 'Avg_Rating', 'URL']].to_dict('records')
-    
-    except ValueError as e:
-        raise Exception(str(e))
-    except Exception as e:
-        raise Exception(f"Error processing description search: {str(e)}")
+    query = re.sub(r'\s+', ' ', user_query or '').strip()
+    if not query:
+        raise Exception("Please enter a description to search")
+    scores = embeddings @ embed_query(query) + quality
+    return _results(scores)
+
 
 def get_recommendations_by_title(book_title):
-    try:
-        if not book_title or book_title.strip() == "":
-            raise ValueError("Please enter a book title to search")
-        
-        # Fuzzy search for book title
-        book_titles = df['Book'].tolist()
-        matches = process.extract(book_title, book_titles, limit=5)
+    if not book_title or book_title.strip() == "":
+        raise Exception("Please enter a book title to search")
 
-        if matches[0][1] >= 92:  # If we have a close match (92% similarity or higher)
-            matched_position = np.where((df['Book'] == matches[0][0]).values)[0][0]
-            matched_book = df.iloc[matched_position]
-            book_embedding = tfidf_matrix[matched_position]
+    # Best-scoring titles first, and among equal scores the more widely read
+    # book (so "Dune" picks Herbert's, not a namesake).
+    matches = process.extract(book_title, _match_titles, scorer=fuzz.WRatio, limit=25,
+                              processor=default_process)
+    matches.sort(key=lambda m: (-round(m[1]), -_popularity[m[2]]))
+    _, score, position = matches[0]
+    if score >= 92:
+        seed_series, seed_author = _series[position], _author[position]
+        scores = embeddings @ embeddings[position] + quality
+        # Skip the book itself and the rest of its series; one more by the
+        # same author is fine.
+        same_author = [0]
 
-            # Calculate similarity scores
-            similarity_scores = cosine_similarity([book_embedding], tfidf_matrix)
+        def exclude(i):
+            if i == position or (seed_series and _series[i] == seed_series):
+                return True
+            if _author[i] == seed_author:
+                same_author[0] += 1
+                return same_author[0] > 1
+            return False
+        return _results(scores, exclude)
 
-            top_n = 15
-            top_n_indices = similarity_scores[0].argsort()[-top_n:][::-1]
-
-            # Remove the matched book from recommendations
-            recommended_books = df.iloc[top_n_indices]
-            recommended_books = recommended_books[recommended_books['Book'] != matched_book['Book']]
-
-            return recommended_books[['Book', 'Author', 'Avg_Rating', 'URL']].to_dict('records')
-        else:
-            # Return potential matches with Author
-            potential_matches = []
-            for match in matches:
-                book_info = df[df['Book'] == match[0]].iloc[0]
-                potential_matches.append({
-                    'Book': match[0],
-                    'similarity': match[1],
-                    'Author': book_info['Author']
-                })
-            return potential_matches
-    
-    except ValueError as e:
-        raise Exception(str(e))
-    except Exception as e:
-        raise Exception(f"Error processing title search: {str(e)}")
+    picks, seen = [], set()
+    for _, s, i in matches:
+        if _title_key[i] not in seen:
+            seen.add(_title_key[i])
+            picks.append({'Book': titles[i], 'similarity': round(s), 'Author': books['Author'].iat[i]})
+    return picks[:5]
 
 STORYGRAPH_CACHE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'storygraph_cache.json')
 _storygraph_cache = (None, None)  # (mtime, parsed data)

@@ -10,3 +10,8 @@
 /static/covers/
 __pycache__/
 *.pyc
+/ai_usage.json
+/Pre-process Steps/catalog_books.parquet
+/Pre-process Steps/embeddings_partial.npy
+/Pre-process Steps/embed_ledger.json
+/Pre-process Steps/sources/

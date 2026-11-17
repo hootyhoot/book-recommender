@@ -20,12 +20,6 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Install dependencies (runtime-only set; app.py never imports torch/transformers)
 RUN pip install --no-cache-dir -r requirements-render.txt
 
-# Pre-download NLTK corpora at build time instead of on every container start,
-# straight into the venv so it comes along with the COPY --from=builder below.
-ENV NLTK_DATA=/opt/venv/nltk_data
-RUN python -m nltk.downloader -d /opt/venv/nltk_data punkt stopwords wordnet && \
-    python -c "import zipfile; zipfile.ZipFile('/opt/venv/nltk_data/corpora/wordnet.zip').extractall('/opt/venv/nltk_data/corpora/')"
-
 # Remove unnecessary files from venv
 RUN find /opt/venv -name "*.pyc" -delete && \
     find /opt/venv -name "*.pyo" -delete && \
@@ -45,7 +39,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set working directory
 WORKDIR /app
 
-# Copy only the virtual environment (includes pre-downloaded NLTK data) from builder
+# Copy only the virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
 
 # Copy application code
@@ -53,7 +47,6 @@ COPY . .
 
 # Set environment to use the venv
 ENV PATH="/opt/venv/bin:$PATH"
-ENV NLTK_DATA=/opt/venv/nltk_data
 
 # Run the application
 CMD ["python", "app.py"]
