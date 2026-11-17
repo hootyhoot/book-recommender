@@ -1,3 +1,24 @@
+// Covers in a shelf that starts collapsed ("want to read") carry data-src
+// instead of src, so ~60 hidden covers don't compete with the visible ones
+// on first load. They're swapped in once the page has finished loading, or
+// earlier if the toggle is hovered, focused or pressed, so they're already
+// there by the time the shelf opens.
+(function () {
+    var pending = document.querySelectorAll('img[data-src]');
+    if (!pending.length) return;
+    var done = false;
+    function loadAll() {
+        if (done) return;
+        done = true;
+        pending.forEach(function (img) { img.src = img.dataset.src; img.removeAttribute('data-src'); });
+    }
+    ['pointerenter', 'pointerdown', 'focus'].forEach(function (ev) {
+        document.querySelectorAll('.section-toggle').forEach(function (t) { t.addEventListener(ev, loadAll, { once: true }); });
+    });
+    if (document.readyState === 'complete') loadAll();
+    else window.addEventListener('load', loadAll);
+})();
+
 (function () {
     var toggles = document.querySelectorAll('.section-toggle');
 

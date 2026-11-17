@@ -6,14 +6,15 @@
     <title>{% block title %}books.mikhail.codes{% endblock %}</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- self-hosted fonts (static/css/fonts.css); the latin files are on every page -->
+    <link rel="preload" href="{{ url_for('static', filename='fonts/silkscreen-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{{ url_for('static', filename='fonts/jetbrains-mono-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
     <link rel="preconnect" href="https://app.thestorygraph.com">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=JetBrains+Mono:wght@400;600&display=swap">
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- stylesheet inlined so first paint never waits on a CSS request -->
+    <style>{{ inline_static('css/fonts.css') }}{{ inline_static('css/style.css') }}</style>
 
-    <script>
+    <script data-cfasync="false">
         // theme cookie is shared with mikhail.codes; dark unless chosen otherwise
         document.documentElement.setAttribute('data-theme', (document.cookie.match(/(?:^|; )theme=(light|dark)/) || [])[1] || 'dark');
     </script>
@@ -63,9 +64,9 @@
         </div>
     </footer>
 
-    <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
-    <script src="{{ url_for('static', filename='js/sky.js') }}" defer></script>
-    <script src="{{ url_for('static', filename='js/prefetch-nav.js') }}" defer></script>
+    <script src="{{ asset('js/theme.js') }}" data-cfasync="false" defer></script>
+    <script src="{{ asset('js/sky.js') }}" data-cfasync="false" defer></script>
+    <script src="{{ asset('js/prefetch-nav.js') }}" data-cfasync="false" defer></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

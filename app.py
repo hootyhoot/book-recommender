@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, url_for
+from markupsafe import Markup
 import pandas as pd
 import numpy as np
 import nltk
@@ -174,14 +175,44 @@ def get_recommendations_by_title(book_title):
         raise Exception(f"Error processing title search: {str(e)}")
 
 STORYGRAPH_CACHE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'storygraph_cache.json')
+_storygraph_cache = (None, None)  # (mtime, parsed data)
 
 
 def load_storygraph_cache():
+    """Parsed shelf data, re-read only when refresh_cache.py has rewritten
+    the file rather than on every page view."""
+    global _storygraph_cache
     try:
-        with open(STORYGRAPH_CACHE_PATH) as f:
-            return json.load(f)
+        mtime = os.path.getmtime(STORYGRAPH_CACHE_PATH)
+        if _storygraph_cache[0] != mtime:
+            with open(STORYGRAPH_CACHE_PATH) as f:
+                _storygraph_cache = (mtime, json.load(f))
+        return _storygraph_cache[1]
     except (FileNotFoundError, json.JSONDecodeError):
         return None
+
+
+STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+_inlined = {}  # filename -> (mtime, contents)
+
+
+@app.template_global()
+def asset(filename):
+    """Static URL with ?v=<mtime>: Caddy caches versioned css/js for a
+    year, and any edit changes the URL."""
+    return url_for('static', filename=filename, v=int(os.path.getmtime(os.path.join(STATIC_DIR, filename))))
+
+
+@app.template_global()
+def inline_static(filename):
+    """A static text file's contents, for inlining into the page (so first
+    paint doesn't wait on a stylesheet request). Re-read when it changes."""
+    path = os.path.join(STATIC_DIR, filename)
+    mtime = os.path.getmtime(path)
+    if _inlined.get(filename, (None,))[0] != mtime:
+        with open(path) as f:
+            _inlined[filename] = (mtime, f.read())
+    return Markup(_inlined[filename][1])
 
 
 @app.template_global()

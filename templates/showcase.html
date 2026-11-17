@@ -100,7 +100,7 @@
         {% for book in data.to_read %}
         <a class="book-spine" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ book.title }} by {{ book.author }}" style="--ratio: {{ book.cover_ratio|default(0.667) }};">
             <span class="spine-body">
-                {% if book.cover_url %}<img src="{{ cover_src(book) }}" alt="" loading="lazy">{% endif %}
+                {% if book.cover_url %}<img data-src="{{ cover_src(book) }}" alt="">{% endif %}
                 <span class="spine-title spine-title--{{ book.spine_text|default('light') }}">{{ book.title }}</span>
             </span>
             <span class="spine-caption"><strong>{{ book.title }}</strong>{{ book.author }}</span>
@@ -116,5 +116,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/shelves.js') }}" defer></script>
+<script src="{{ asset('js/shelves.js') }}" data-cfasync="false" defer></script>
 {% endblock %}
