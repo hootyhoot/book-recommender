@@ -557,6 +557,10 @@ main { display: block; flex: 1 0 auto; padding: 2.5rem 0 5rem; }
    collapsed, was still reserving its full expanded height below the
    fold even though nothing was visible there. */
 .shelf-wrap-inner { overflow: hidden; min-height: 0; }
+/* Once a shelf has finished opening, the clip comes off, so a pulled-out
+   cover near the edge isn't cut off by the wrapper. It goes back on the
+   moment the shelf starts to close. */
+.shelf-wrap[data-settled="true"] .shelf-wrap-inner { overflow: visible; }
 
 /* -----------------------------------------------------------------------
    Recommender page

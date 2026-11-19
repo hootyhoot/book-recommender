@@ -71,7 +71,7 @@
     </button>
 </div>
 {% if data.read %}
-<div class="shelf-wrap" id="shelf-read" data-open="true">
+<div class="shelf-wrap" id="shelf-read" data-open="true" data-settled="true">
     <div class="shelf-wrap-inner"><div class="shelf">
         {% for book in data.read %}
         <a class="book-spine" href="{{ book.url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ book.title }} by {{ book.author }}" style="--ratio: {{ book.cover_ratio|default(0.667) }};">

@@ -25,7 +25,15 @@
     function setOpen(toggle, open) {
         toggle.setAttribute('aria-expanded', String(open));
         var wrap = document.getElementById(toggle.getAttribute('aria-controls'));
-        if (wrap) wrap.dataset.open = String(open);
+        if (!wrap) return;
+        wrap.dataset.settled = 'false';
+        wrap.dataset.open = String(open);
+        if (open) {
+            clearTimeout(wrap._settle);
+            wrap._settle = setTimeout(function () {
+                if (wrap.dataset.open === 'true') wrap.dataset.settled = 'true';
+            }, 450);
+        }
     }
 
     toggles.forEach(function (toggle) {
