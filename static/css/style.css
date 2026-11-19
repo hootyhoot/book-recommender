@@ -352,12 +352,16 @@ main { display: block; flex: 1 0 auto; padding: 2.5rem 0 5rem; }
   overflow: hidden;
   border: 1px solid var(--border);
   background: var(--surface);
-  /* Resting on the shelf: a shadow on the wall behind, to the right only,
-     never below, since the book stands on the plank. */
-  box-shadow: 5px 0 0 var(--shelf-shadow);
-  transition: transform .12s steps(3), border-color .12s steps(2), box-shadow .12s steps(3);
+  /* Lit from the top left, so the shadow falls right and down onto the wall
+     behind. While the book stands on the plank, the clip cuts off the part
+     that would fall below it: the right-hand shadow starts 5px down and
+     stops at the shelf. Once lifted, the clip opens and the full shadow
+     shows. */
+  box-shadow: 5px 5px 0 var(--shelf-shadow);
+  clip-path: inset(-20px -20px 0 -20px);
+  transition: transform .12s steps(3), border-color .12s steps(2), box-shadow .12s steps(3), clip-path .12s steps(3);
 }
-.favorite-book:hover .cover, .favorite-book.touch-open .cover { transform: translate(-3px, -6px); border-color: var(--role-highlight); box-shadow: 8px 11px 0 var(--shelf-shadow); }
+.favorite-book:hover .cover, .favorite-book.touch-open .cover { transform: translate(-3px, -6px); border-color: var(--role-highlight); box-shadow: 8px 11px 0 var(--shelf-shadow); clip-path: inset(-20px -20px -20px -20px); }
 .favorite-book .cover img { width: 100%; height: 100%; object-fit: cover; }
 
 @media (max-width: 500px) {
